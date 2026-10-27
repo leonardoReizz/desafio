@@ -1,0 +1,195 @@
+import type { Ticket, TicketUpdate } from "@nexo/contracts";
+
+const DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Chamados em situações variadas (Anexo B), com datas relativas a `now` para que os cenários
+ * (vencido, resolvido há ≤ 7 dias etc.) continuem válidos sempre que o seed roda.
+ */
+export function buildSeedTickets(now: Date): Ticket[] {
+  const ago = (days: number, hour = 10, minute = 0): string => {
+    const d = new Date(now.getTime() - days * DAY);
+    d.setHours(hour, minute, 0, 0);
+    return d.toISOString();
+  };
+  let seq = 0;
+  const up = (at: string, author: TicketUpdate["author"], authorName: string, text: string): TicketUpdate => ({
+    id: `seed-upd-${++seq}`,
+    at,
+    author,
+    authorName,
+    text,
+  });
+
+  const t = (p: Omit<Ticket, "subcategory" | "assignedTeam" | "resolvedAt" | "lastServiceUpdateAt"> & Partial<Ticket>): Ticket => ({
+    subcategory: null,
+    assignedTeam: "N1",
+    resolvedAt: null,
+    lastServiceUpdateAt: null,
+    ...p,
+  });
+
+  return [
+    // ---- Ana Souza (cenários principais do protótipo) ----
+    t({
+      id: "INC-20311",
+      type: "INC",
+      title: "Notebook lento após atualização do Windows",
+      description: "Lentidão geral desde a atualização de 15/10. Reiniciar e rodar o diagnóstico da central não resolveu.",
+      category: "hardware",
+      subcategory: "Notebook",
+      priority: "media",
+      affected: "so_eu",
+      status: "aguardando_analista",
+      requesterId: "emp_ana",
+      createdAt: ago(11, 14, 20),
+      updatedAt: ago(6, 9, 10),
+      lastServiceUpdateAt: ago(6, 9, 10),
+      updates: [
+        up(ago(11, 14, 20), "sistema", "Service desk", "Chamado aberto."),
+        up(ago(6, 9, 10), "analista", "Juliana Costa", "Rodei a limpeza remota; se continuar lento vamos verificar o driver de vídeo."),
+      ],
+    }),
+    t({
+      id: "INC-20298",
+      type: "INC",
+      title: "Acesso à pasta Financeiro no SharePoint",
+      description: "Desde a migração do SharePoint, a pasta Financeiro/Fechamento retorna 'acesso negado'.",
+      category: "acesso",
+      subcategory: "SharePoint",
+      priority: "media",
+      affected: "so_eu",
+      status: "em_andamento",
+      requesterId: "emp_ana",
+      createdAt: ago(2, 11, 5),
+      updatedAt: ago(1, 16, 0),
+      lastServiceUpdateAt: ago(1, 16, 0),
+      updates: [up(ago(1, 16, 0), "analista", "Juliana Costa", "Pedi ao dono da pasta para reaplicar as permissões.")],
+    }),
+    t({
+      id: "REQ-10442",
+      type: "REQ",
+      title: "Segundo monitor para home office",
+      description: "Solicito um segundo monitor 24\" para trabalho remoto.",
+      category: "hardware",
+      subcategory: "Periféricos",
+      priority: "baixa",
+      affected: "so_eu",
+      status: "aprovado",
+      requesterId: "emp_ana",
+      createdAt: ago(9, 9, 0),
+      updatedAt: ago(7, 15, 30),
+      lastServiceUpdateAt: ago(7, 15, 30),
+      updates: [up(ago(7, 15, 30), "analista", "Juliana Costa", "Aprovado pelo gestor. Entrega agendada pela logística.")],
+    }),
+    t({
+      id: "INC-20150",
+      type: "INC",
+      title: "Senha do SAP bloqueada",
+      description: "Senha do SAP bloqueou após tentativas erradas.",
+      category: "acesso",
+      subcategory: "SAP",
+      priority: "media",
+      affected: "so_eu",
+      status: "resolvido",
+      requesterId: "emp_ana",
+      createdAt: ago(5, 8, 40),
+      updatedAt: ago(4, 10, 0),
+      lastServiceUpdateAt: ago(4, 10, 0),
+      resolvedAt: ago(4, 10, 0),
+      updates: [up(ago(4, 10, 0), "analista", "Juliana Costa", "Senha desbloqueada e redefinida.")],
+    }),
+    t({
+      id: "INC-19877",
+      type: "INC",
+      title: "Outlook não sincroniza no celular",
+      description: "E-mails não chegam no app Outlook do celular corporativo.",
+      category: "email",
+      priority: "media",
+      affected: "so_eu",
+      status: "resolvido",
+      requesterId: "emp_ana",
+      createdAt: ago(58, 9, 0),
+      updatedAt: ago(55, 11, 0),
+      resolvedAt: ago(55, 11, 0),
+      lastServiceUpdateAt: ago(55, 11, 0),
+      updates: [],
+    }),
+    t({
+      id: "INC-19410",
+      type: "INC",
+      title: "Troca de senha da rede",
+      description: "Senha de rede expirou fora do escritório.",
+      category: "acesso",
+      priority: "alta",
+      affected: "so_eu",
+      status: "fechado",
+      requesterId: "emp_ana",
+      createdAt: ago(108, 9, 0),
+      updatedAt: ago(108, 12, 0),
+      resolvedAt: ago(108, 12, 0),
+      lastServiceUpdateAt: ago(108, 12, 0),
+      updates: [],
+    }),
+
+    // ---- Outros funcionários (para provar isolamento entre usuários) ----
+    t({
+      id: "INC-20322",
+      type: "INC",
+      title: "Sem acesso ao SAP — fechamento de pedido hoje",
+      description: "Perfil do SAP sem a transação de pedidos; preciso fechar um pedido de cliente hoje.",
+      category: "acesso",
+      subcategory: "SAP",
+      priority: "alta",
+      affected: "so_eu",
+      status: "aguardando_analista",
+      requesterId: "emp_carla",
+      createdAt: ago(0, 9, 58),
+      updatedAt: ago(0, 9, 58),
+      updates: [],
+    }),
+    t({
+      id: "INC-20330",
+      type: "INC",
+      title: "Impressora do 3º andar não imprime",
+      description: "Fila travada na impressora MKT-03.",
+      category: "hardware",
+      subcategory: "Impressora",
+      priority: "media",
+      affected: "equipe",
+      status: "aberto",
+      requesterId: "emp_bruno",
+      createdAt: ago(1, 14, 0),
+      updatedAt: ago(1, 14, 0),
+      updates: [],
+    }),
+    t({
+      id: "REQ-10460",
+      type: "REQ",
+      title: "Licença do Figma",
+      description: "Licença Figma Professional para o time de produto.",
+      category: "software",
+      priority: "baixa",
+      affected: "so_eu",
+      status: "aberto",
+      requesterId: "emp_diego",
+      createdAt: ago(3, 10, 0),
+      updatedAt: ago(3, 10, 0),
+      updates: [],
+    }),
+    t({
+      id: "INC-20519",
+      type: "INC",
+      title: "Teams sem áudio em reuniões",
+      description: "Microfone não é reconhecido pelo Teams desde ontem.",
+      category: "software",
+      priority: "media",
+      affected: "so_eu",
+      status: "aberto",
+      requesterId: "emp_elisa",
+      createdAt: ago(0, 10, 3),
+      updatedAt: ago(0, 10, 3),
+      updates: [],
+    }),
+  ];
+}
