@@ -32,7 +32,7 @@ apps/web            Next.js 16 (App Router) — UI + BFF (route handlers) + runt
   src/app/          rotas: /login, /chat, /perfil, /console, /api/*
   src/components/   UI (fiel ao protótipo em design/)
   src/server/       código só de servidor
-    auth/           sessão (cookie HttpOnly assinado), RBAC funcionário/analista
+    auth/           sessão (cookie HttpOnly com token opaco), RBAC funcionário/analista
     db/             SQLite (conversas, mensagens, rascunhos, estado)
     agent/          Mastra agent, tools, prompt, guardrails, trace
     tickets-client/ cliente HTTP do serviço de chamados (retry, timeout, circuit breaker)
@@ -117,7 +117,10 @@ logar, o chat reabre a última conversa não encerrada.
 ### 2.6 Autenticação e segurança
 
 - Login: e-mail corporativo de um funcionário/analista do seed + qualquer senha (exigência do PRD).
-  Sessão em cookie `HttpOnly`, `SameSite=Lax`, `Secure` em produção, assinado (HMAC, `SESSION_SECRET`).
+  Sessão com token opaco aleatório (32 bytes) em cookie `HttpOnly`, `SameSite=Lax`, `Secure` em
+  produção; no banco fica só o hash SHA-256 do token (vazar o banco não permite sequestrar sessão).
+- `proxy.ts` só redireciona quem não tem cookie para `/login`; a autorização real (sessão válida,
+  papel e dono do recurso) é feita em cada route handler.
 - RBAC: rotas `/console` e `/api/console/*` só para analistas; `/api/chat` só para funcionários.
 - Toda query por conversa/chamado é escopada pelo dono da sessão. O console lê chamados do
   funcionário da conversa via serviço, com o analista autenticado.
@@ -140,7 +143,7 @@ logar, o chat reabre a última conversa não encerrada.
 
 ### 2.8 Modelo de LLM
 
-Claude via `@ai-sdk/anthropic` (provider usado pelo Mastra). Padrão `claude-opus-5-5` com esforço
+Claude pelo *model router* do Mastra (`anthropic/<modelo>`, provider Anthropic do AI SDK por baixo). Padrão `claude-opus-5-5` com esforço
 baixo — melhor qualidade de decisão e de uso de ferramentas; configurável por `LLM_MODEL`
 (ex.: `claude-haiku-5-5` para reduzir custo ~40×). Custo controlado por: prompt de sistema estável
 (cache de prefixo), janela de histórico curta, tools retornando resumos, `max_tokens` baixo e
