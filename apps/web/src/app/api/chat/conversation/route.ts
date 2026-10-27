@@ -14,7 +14,12 @@ export async function GET(req: Request) {
     const id = new URL(req.url).searchParams.get("id");
     const conversation = id ? repo.getOwned(id, employee.id) : repo.latestOpenFor(employee.id);
     if (id && !conversation) throw new NotFound("Conversa não encontrada");
-    return NextResponse.json({ employee, conversation, messages: conversation ? repo.messages(conversation.id) : [] });
+    // Confirmação de leitura: só quando a aba do chat está visível para o funcionário (o cliente informa).
+    if (conversation && new URL(req.url).searchParams.get("read") === "1") {
+      repo.markRead(conversation.id, "employee", new Date().toISOString());
+    }
+    const fresh = conversation ? (repo.get(conversation.id) ?? conversation) : null;
+    return NextResponse.json({ employee, conversation: fresh, messages: fresh ? repo.messages(fresh.id) : [] });
   });
 }
 

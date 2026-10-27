@@ -152,6 +152,8 @@ export const UiBlock = z.discriminatedUnion("kind", [
     options: z.array(QuickReplyOption).min(1).max(5),
   }),
   z.object({ kind: z.literal("ticket_select"), tickets: z.array(TicketSummary) }),
+  /** Resumo dos chamados do funcionário, agrupado; cada linha abre o chamado. */
+  z.object({ kind: z.literal("ticket_list"), open: z.array(TicketSummary), closed: z.array(TicketSummary) }),
   z.object({ kind: z.literal("ticket_card"), ticket: TicketView }),
   z.object({ kind: z.literal("draft"), draft: TicketDraft }),
   z.object({ kind: z.literal("handoff"), team: z.enum(["N1", "N2"]), etaLabel: z.string(), reason: HandoffReason }),
@@ -186,6 +188,9 @@ export const Conversation = z.object({
   /** Confiança da última decisão do agent (para "Agent pediu ajuda · confiança 41%"). */
   lastConfidence: z.number().min(0).max(1).nullable(),
   userMessageCount: z.number().int().nonnegative(),
+  /** Até quando cada lado leu a conversa (confirmação de leitura ✓✓). */
+  employeeReadAt: z.iso.datetime().nullable(),
+  analystReadAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });

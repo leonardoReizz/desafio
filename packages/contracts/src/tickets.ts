@@ -111,6 +111,7 @@ export const TicketSummary = Ticket.pick({
   status: true,
   createdAt: true,
   updatedAt: true,
+  resolvedAt: true,
 }).extend({ sla: SlaInfo });
 export type TicketSummary = z.infer<typeof TicketSummary>;
 

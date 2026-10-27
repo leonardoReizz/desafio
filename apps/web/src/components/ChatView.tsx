@@ -6,6 +6,8 @@ import { MAX_USER_MESSAGES_PER_SESSION } from "@nexo/contracts";
 import { ChatBlock, type DraftEdit } from "./ChatBlocks";
 import { DecisionTracePanel, TraceStepLine } from "./DecisionTracePanel";
 import { EmployeeShell } from "./EmployeeShell";
+import { isReadBy, ReadReceipt } from "./ReadReceipt";
+import { formatClock } from "@/lib/format";
 
 export interface ChatViewProps {
   messages: ChatMessage[];
@@ -108,6 +110,7 @@ export function ChatView({
                 <ChatBlock
                   key={`${message.id}-${index}`}
                   block={block}
+                  interactive={!isSending && (conversation.status === "agent" || conversation.status === "closed")}
                   selectedQuickReply={selectedQuickReply}
                   editingDraft={editingDraft}
                   onEditChange={onEditChange}
@@ -133,7 +136,20 @@ export function ChatView({
                       <span>⇄ &nbsp;{message.text}</span>
                     </div>
                   ) : message.role === "user" ? (
-                    <div className="user-bubble">{message.text}</div>
+                    <div className="user-bubble-wrap">
+                      <div className="user-bubble">{message.text}</div>
+                      <small className="user-meta">
+                        {formatClock(message.createdAt)}
+                        {!message.id.startsWith("local-") && (
+                          <ReadReceipt
+                            read={
+                              isReadBy(conversation.analystReadAt, message.createdAt) ||
+                              messages.some((m) => (m.role === "agent" || m.role === "analyst" ? m.createdAt > message.createdAt : false))
+                            }
+                          />
+                        )}
+                      </small>
+                    </div>
                   ) : (
                     <div className="agent-content">
                       {message.trace ? (

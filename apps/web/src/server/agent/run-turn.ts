@@ -1,6 +1,9 @@
 import "server-only";
 import {
   MAX_USER_MESSAGES_PER_SESSION,
+  OPEN_STATUSES,
+  PRIORITY_LABEL,
+  STATUS_LABEL,
   type ChatMessage,
   type ChatStreamEvent,
   type DecisionTrace,
@@ -180,7 +183,14 @@ export async function runEmployeeTurn(input: TurnInput, opts: TurnOptions): Prom
 
 /** Cards antes das opções rápidas, como no protótipo. */
 function orderBlocks(blocks: UiBlock[]): UiBlock[] {
-  const order: Record<UiBlock["kind"], number> = { ticket_select: 0, ticket_card: 1, draft: 2, handoff: 3, quick_replies: 4 };
+  const order: Record<UiBlock["kind"], number> = {
+    ticket_select: 0,
+    ticket_list: 0,
+    ticket_card: 1,
+    draft: 2,
+    handoff: 3,
+    quick_replies: 4,
+  };
   return [...blocks].sort((a, b) => order[a.kind] - order[b.kind]);
 }
 
@@ -194,6 +204,18 @@ async function deterministicRoute(ctx: TurnContext, input: TurnInput): Promise<D
 
   if (action?.kind === "select_ticket") {
     const t = await showTicket(ctx, action.ticketId, { card: true });
+    if (!OPEN_STATUSES.includes(t.status)) {
+      const when = t.resolvedAt ? ` em ${formatLocalDate(new Date(t.resolvedAt))}` : "";
+      return {
+        intent: "consultar_chamado",
+        understood: `Quer ver o ${t.id}`,
+        action: "mostrou_chamado",
+        confidence: 1,
+        rationale: `O ${t.id} está ${STATUS_LABEL[t.status].toLowerCase()}; chamado resolvido há até 7 dias pode ser reaberto.`,
+        rules: ["Chamado resolvido há até 7 dias pode ser reaberto"],
+        text: `Este chamado foi ${STATUS_LABEL[t.status].toLowerCase()}${when}. Se o problema voltou, me conte o que aconteceu que eu vejo se dá para reabrir.`,
+      };
+    }
     if (t.sla.overdue) {
       recorder.blocks.push({ kind: "quick_replies", question: null, options: overdueOfferOptions() });
       const since = t.lastServiceUpdateAt ?? t.createdAt;
@@ -203,9 +225,9 @@ async function deterministicRoute(ctx: TurnContext, input: TurnInput): Promise<D
         understood: `Quer saber o status do ${t.id}`,
         action: "mostrou_chamado",
         confidence: 1,
-        rationale: `O ${t.id} está sem atualização há ${days} dias, acima do prazo da prioridade ${t.priority}. Pela regra de transferência, chamado vencido justifica oferecer um analista.`,
+        rationale: `O ${t.id} está sem atualização há ${days} dias, acima do prazo da prioridade ${PRIORITY_LABEL[t.priority].toLowerCase()}. Pela regra de transferência, chamado vencido justifica oferecer um analista.`,
         rules: [],
-        text: `Está sem atualização há ${days} dias, acima do prazo para prioridade ${t.priority === "media" ? "média" : t.priority}. Quer que eu chame um analista?`,
+        text: `Está sem atualização há ${days} dias, acima do prazo para prioridade ${PRIORITY_LABEL[t.priority].toLowerCase()}. Quer que eu chame um analista?`,
       };
     }
     return {
@@ -215,21 +237,24 @@ async function deterministicRoute(ctx: TurnContext, input: TurnInput): Promise<D
       confidence: 1,
       rationale: "Seleção feita na lista de chamados; o chamado está dentro do prazo.",
       rules: [],
-      text: `Está dentro do prazo (${t.sla.label}). Quer complementar com alguma informação?`,
+      text: `Está ${STATUS_LABEL[t.status].toLowerCase()} e dentro do prazo (${t.sla.label}). Quer complementar com alguma informação?`,
     };
   }
 
   const wantsHuman = (action?.kind === "quick_reply" && action.value === "falar_com_analista") || asksForHuman(input.text);
   if (wantsHuman) {
     const recent = deps.conversations.recentMessages(conversation.id, 6);
-    const focus = conversation.relatedTicketId;
+    // Chamado citado na mensagem tem precedência sobre o último em foco na conversa.
+    const mentioned = /\b(?:INC|REQ)-\d{5}\b/i.exec(input.text)?.[0].toUpperCase() ?? null;
+    let focus = mentioned ?? conversation.relatedTicketId;
     let reason: "pedido_do_funcionario" | "chamado_vencido" = "pedido_do_funcionario";
     if (focus) {
       try {
         const t = await showTicket(ctx, focus, { card: false });
         if (t.sla.overdue) reason = "chamado_vencido";
       } catch {
-        // sem detalhe do chamado, segue como pedido do funcionário
+        // chamado inexistente ou de outra pessoa: transfere sem vincular (privacidade)
+        focus = null;
       }
     }
     requestHandoff(ctx, reason, buildHandoffSummary(ctx, reason, recent), focus, false);
@@ -427,6 +452,8 @@ function describeBlock(b: UiBlock): string {
       return `opções: ${b.options.map((o) => o.label).join(" / ")}`;
     case "ticket_select":
       return `seleção de chamados: ${b.tickets.map((t) => t.id).join(", ")}`;
+    case "ticket_list":
+      return `lista de chamados — abertos: ${b.open.map((t) => `${t.id} (${t.status}${t.sla.overdue ? ", vencido" : ""})`).join(", ") || "nenhum"}; encerrados: ${b.closed.map((t) => t.id).join(", ") || "nenhum"}`;
     case "ticket_card":
       return `card ${b.ticket.id} (${b.ticket.status}, ${b.ticket.sla.label})`;
     case "draft":

@@ -50,6 +50,7 @@ function summarize(t: TicketView): TicketSummary {
     status: t.status,
     createdAt: t.createdAt,
     updatedAt: t.updatedAt,
+    resolvedAt: t.resolvedAt,
     sla: t.sla,
   };
 }
@@ -77,10 +78,14 @@ export async function listMyTickets(ctx: TurnContext, opts: { includeClosed: boo
       attempts,
     };
   });
-  if (opts.showSelection) {
-    const selectable = views.filter((t) => OPEN_STATUSES.includes(t.status));
-    if (selectable.length > 0) ctx.recorder.blocks.push({ kind: "ticket_select", tickets: selectable.map(summarize) });
-  }
+  const open = views.filter((t) => OPEN_STATUSES.includes(t.status));
+  const closed = views.filter((t) => !OPEN_STATUSES.includes(t.status));
+  // Um único bloco de chamados por resposta, mesmo se o modelo listar mais de uma vez.
+  const blocks = ctx.recorder.blocks;
+  for (let i = blocks.length - 1; i >= 0; i--)
+    if (blocks[i]?.kind === "ticket_select" || blocks[i]?.kind === "ticket_list") blocks.splice(i, 1);
+  if (opts.showSelection && open.length > 0) blocks.push({ kind: "ticket_select", tickets: open.map(summarize) });
+  else if (views.length > 0) blocks.push({ kind: "ticket_list", open: open.map(summarize), closed: closed.map(summarize) });
   return views;
 }
 

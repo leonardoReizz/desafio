@@ -46,7 +46,9 @@ export function EmployeeShell({
       <div className="employee-main">
         <header className="employee-topbar">
           <div className="breadcrumb">
-            Service desk de TI <ChevronRight size={16} />
+            <span className="crumb-root">
+              Service desk de TI <ChevronRight size={16} />
+            </span>
             <strong>{section === "chat" ? "Atendimento" : "Meu perfil"}</strong>
           </div>
           {section === "chat" && (

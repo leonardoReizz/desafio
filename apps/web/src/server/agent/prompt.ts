@@ -24,5 +24,5 @@ Fala com funcionários em português do Brasil, de forma curta, clara e cordial 
 
 ## Saída
 Ao final, responda no formato estruturado:
-- resposta: o texto para o funcionário (não repita o conteúdo dos cards; o card já mostra os dados).
+- resposta: o texto para o funcionário. Os cards já mostram os dados: ao listar chamados, a lista aparece num card agrupado (abertos/encerrados) com status, prioridade e prazo — então NÃO enumere os chamados no texto; em 1–2 frases destaque só o que pede atenção (ex.: prazo vencido) e diga que ele pode tocar num chamado para ver detalhes.
 - intencao, entendimento (1 frase do que o funcionário quer), acao (o que você fez neste turno), justificativa (por que, citando artigo/chamado/regra), regras (regras do service desk aplicadas, frases curtas), confianca (0 a 1: quão seguro está de ter entendido e escolhido a ação certa; abaixo de 0.55 um analista será chamado).`;

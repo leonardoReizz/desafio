@@ -83,6 +83,7 @@ export function listConversations(deps: Deps, analyst: Analyst, filter: Conversa
 export async function conversationDetail(
   deps: Deps,
   conversationId: string,
+  opts: { markRead: boolean } = { markRead: false },
 ): Promise<ConversationDetail & { ticketsUnavailable: boolean }> {
   const conversation = deps.conversations.get(conversationId);
   if (!conversation) throw new NotFound("Conversa não encontrada");
@@ -98,11 +99,10 @@ export async function conversationDetail(
     if (!(e instanceof TicketServiceUnavailableError)) throw e;
     ticketsUnavailable = true;
   }
-  if (conversation.status === "waiting_human" || conversation.status === "human") {
-    deps.conversations.update(conversation.id, { analystReadAt: now.toISOString() });
-  }
+  // Só conta como lido quando o console está visível para o analista (o cliente informa).
+  if (opts.markRead) deps.conversations.markRead(conversation.id, "analyst", now.toISOString());
   return {
-    conversation,
+    conversation: deps.conversations.get(conversation.id) ?? conversation,
     employee,
     messages: deps.conversations.messages(conversation.id),
     tickets,

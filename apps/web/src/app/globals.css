@@ -2274,3 +2274,458 @@ textarea:focus-visible {
 .conversation-item:has(.unread) .item-preview {
   padding-right: 28px;
 }
+/* Lista de chamados do funcionário (bloco ticket_list) */
+.ticket-list {
+  margin-top: 6px;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow:
+    0 2px 3px #1b24310a,
+    0 8px 20px #1b243108;
+}
+.ticket-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  color: #697485;
+  font-size: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+.ticket-list-counts {
+  display: flex;
+  gap: 6px;
+}
+.ticket-list section + section {
+  border-top: 1px solid var(--rule);
+}
+.ticket-list h4 {
+  margin: 0;
+  padding: 10px 16px 4px;
+  color: #75808d;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ticket-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 6px;
+}
+.ticket-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.ticket-row:hover,
+.ticket-row:focus-visible {
+  background: #edf6ff;
+  outline: none;
+}
+.ticket-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.ticket-row-id {
+  color: #697485;
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+.ticket-row-main strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+}
+.ticket-row-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.ticket-row-chevron {
+  flex: none;
+  color: #a3abb6;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #f1f3f5;
+  color: #4b5563;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+}
+.badge .status-dot {
+  margin-right: 0;
+  width: 6px;
+  height: 6px;
+}
+.badge-status-aberto,
+.badge-status-em_andamento {
+  background: #eaf5ff;
+  color: #0b5cad;
+}
+.badge-status-aguardando_analista,
+.badge-status-aguardando_usuario {
+  background: #fff6e0;
+  color: #8a5a00;
+}
+.badge-status-aprovado,
+.badge-status-resolvido {
+  background: #e6f8ef;
+  color: #00804a;
+}
+.badge-status-fechado,
+.badge-muted {
+  background: #f1f3f5;
+  color: #5e6877;
+}
+.badge-priority-critica {
+  background: #fdecec;
+  color: #b4232a;
+}
+.badge-priority-alta {
+  background: #fff6e0;
+  color: #8a5a00;
+}
+.badge-priority-media,
+.badge-priority-baixa {
+  background: #f1f3f5;
+  color: #4b5563;
+}
+.badge-overdue {
+  background: #fdecec;
+  color: #b4232a;
+}
+@media (max-width: 700px) {
+  .ticket-row {
+    flex-wrap: wrap;
+  }
+  .ticket-row-badges {
+    justify-content: flex-start;
+    width: 100%;
+  }
+  .ticket-row-chevron {
+    display: none;
+  }
+}
+.ticket-row:disabled,
+.quick-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.ticket-row:disabled:hover {
+  background: transparent;
+}
+/* Confirmação de leitura: ✓ enviada (cinza) · ✓✓ lida (azul) */
+.receipt.sent,
+.console-bubble small svg.receipt.sent {
+  color: #9aa3ae;
+}
+.receipt.read,
+.console-bubble small svg.receipt.read {
+  color: #1687e0;
+}
+.user-bubble-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  max-width: min(520px, 85%);
+}
+.user-bubble-wrap .user-bubble {
+  max-width: 100%;
+}
+.user-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #75808e;
+  font-size: 11px;
+}
+
+/* ---- Mobile e telas estreitas ---- */
+.crumb-root {
+  display: inline-flex;
+  align-items: center;
+  gap: 13px;
+}
+.mobile-back {
+  display: none;
+}
+.header-actions .tickets-toggle {
+  display: inline-flex;
+}
+.console-shell.no-tickets {
+  grid-template-columns: 64px 380px minmax(0, 1fr);
+}
+.console-shell.no-tickets .ticket-history {
+  display: none;
+}
+@media (max-width: 1250px) {
+  .console-shell.no-tickets {
+    grid-template-columns: 56px 310px minmax(0, 1fr);
+  }
+}
+@media (max-width: 1050px) {
+  /* Chamados do funcionário viram gaveta sobreposta, aberta pelo botão do cabeçalho. */
+  .console-shell .ticket-history,
+  .console-shell.no-tickets .ticket-history {
+    display: none;
+  }
+  .console-shell.tickets-open .ticket-history {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(380px, 100%);
+    z-index: 40;
+    background: #fff;
+    box-shadow: -12px 0 32px #1b24311f;
+    overflow-y: auto;
+  }
+  .console-shell.no-tickets {
+    grid-template-columns: 56px 295px minmax(0, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  /* Funcionário: barra lateral vira barra superior compacta. */
+  .employee-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+  }
+  .employee-sidebar {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .employee-sidebar .sidebar-brand {
+    margin: 0 6px 0 0;
+  }
+  .employee-sidebar nav {
+    display: flex;
+    gap: 4px;
+  }
+  .employee-sidebar .sidebar-link {
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+    padding: 0;
+  }
+  .employee-sidebar .sidebar-bottom {
+    margin: 0 0 0 auto;
+    display: flex;
+    align-items: center;
+  }
+  .employee-sidebar .sidebar-user {
+    display: none;
+  }
+  .employee-main {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
+  .employee-topbar {
+    height: 48px;
+    padding: 0 16px;
+  }
+  .crumb-root {
+    display: none;
+  }
+  .online-pill {
+    padding: 4px 9px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .composer-wrap {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .chat-thread {
+    padding-top: 20px;
+  }
+  .chat-page.consultation .chat-thread {
+    padding-top: 20px;
+  }
+  .user-bubble {
+    font-size: 14px;
+  }
+  .ticket-card {
+    padding: 14px 14px 0;
+  }
+  .ticket-grid.three,
+  .ticket-grid.four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ticket-grid strong {
+    white-space: normal;
+  }
+  .card-top {
+    flex-wrap: wrap;
+    gap: 4px 14px;
+  }
+  .draft-actions {
+    margin: 0 -14px;
+    flex-wrap: wrap;
+  }
+  .draft-actions button {
+    min-height: 40px;
+  }
+  .draft-actions kbd {
+    display: none;
+  }
+  .quick-chip,
+  .ticket-option {
+    min-height: 40px;
+  }
+
+  /* Perfil: rótulo em cima do valor, e-mail quebra em vez de cortar. */
+  .profile-data > div {
+    height: auto;
+    grid-template-columns: 1fr;
+    gap: 2px;
+    padding: 12px 18px;
+  }
+  .profile-data strong {
+    overflow-wrap: anywhere;
+  }
+
+  /* Console: um painel por vez. */
+  .console-shell,
+  .console-shell.no-tickets {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+  }
+  .console-rail {
+    flex-direction: row;
+    padding: 8px 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .console-rail .rail-spacer {
+    flex: 1;
+  }
+  .conversation-list,
+  .console-conversation {
+    flex: 1;
+    min-height: 0;
+  }
+  .console-shell.pane-list .conversation-list {
+    display: flex;
+  }
+  .console-shell.pane-list .console-conversation,
+  .console-shell.pane-chat .conversation-list {
+    display: none;
+  }
+  .list-items {
+    overflow-y: auto;
+  }
+  .mobile-back {
+    display: inline-flex;
+  }
+  .console-chat-header {
+    gap: 8px;
+    padding: 10px 12px;
+    flex-wrap: wrap;
+  }
+  .console-chat-header .avatar {
+    display: none;
+  }
+  .console-person {
+    min-width: 0;
+    flex: 1;
+  }
+  .console-person strong,
+  .console-person small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .header-actions {
+    gap: 6px;
+  }
+  .header-actions .button-secondary,
+  .header-actions .button-danger {
+    font-size: 0;
+    gap: 0;
+    padding: 0 10px;
+    height: 38px;
+  }
+  .header-actions .waiting-pill {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+  .console-message-flow {
+    padding: 14px 12px;
+  }
+  .console-bubble {
+    max-width: 85vw;
+  }
+  .takeover-row {
+    flex-wrap: wrap;
+  }
+  .takeover-row button {
+    flex: 1 1 auto;
+    min-height: 40px;
+  }
+  .console-shell.tickets-open .ticket-history {
+    width: 100%;
+  }
+  /* Resumo fixo cobria as mensagens numa tela baixa: no celular ele rola junto. */
+  .case-summary {
+    position: static;
+  }
+  /* Alvos de toque confortáveis. */
+  .trace-trigger {
+    min-height: 32px;
+  }
+  .list-filters {
+    flex-wrap: wrap;
+  }
+  .list-filters button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .list-search input {
+    min-height: 36px;
+    font-size: 16px;
+  }
+  /* 16px evita o zoom automático do iOS ao focar o campo. */
+  textarea,
+  input {
+    font-size: 16px;
+  }
+  .console-message .trace-wrapper.compact .trace-trigger {
+    min-height: 32px;
+    padding: 0 6px;
+  }
+}

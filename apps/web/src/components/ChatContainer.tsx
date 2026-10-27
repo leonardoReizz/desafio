@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage, ChatStreamEvent, Conversation, Employee, SendMessageInput, TicketDraft, TraceStep } from "@nexo/contracts";
-import { api, ApiRequestError, streamChat } from "@/lib/api";
+import { api, ApiRequestError, readParam, streamChat } from "@/lib/api";
 import { ChatView } from "./ChatView";
 import type { DraftEdit } from "./ChatBlocks";
 
@@ -20,6 +20,8 @@ function blankConversation(employeeId: string): Conversation {
     relatedTicketId: null,
     lastConfidence: null,
     userMessageCount: 0,
+    employeeReadAt: null,
+    analystReadAt: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -59,10 +61,25 @@ export function ChatContainer({ employee }: { employee: Employee }) {
 
   // "Voltar outro dia e continuar de onde parei": retoma a última conversa aberta.
   useEffect(() => {
-    api<Snapshot>("/api/chat/conversation")
+    api<Snapshot>(`/api/chat/conversation?${readParam()}`)
       .then(applySnapshot)
       .catch((e: unknown) => setError(e instanceof ApiRequestError ? e.message : "Não foi possível carregar a conversa."))
       .finally(() => setLoaded(true));
+  }, [applySnapshot]);
+
+  // Voltar para a aba conta como leitura: avisa o servidor (o analista vê ✓✓ azul).
+  useEffect(() => {
+    function onVisible() {
+      const id = conversationIdRef.current;
+      if (document.visibilityState !== "visible" || !id) return;
+      api<Snapshot>(`/api/chat/conversation?id=${encodeURIComponent(id)}&read=1`)
+        .then((s) => {
+          if (conversationIdRef.current === id) applySnapshot(s);
+        })
+        .catch(() => {});
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [applySnapshot]);
 
   // Com analista, o agent não responde: buscamos as mensagens do analista periodicamente.
@@ -70,7 +87,7 @@ export function ChatContainer({ employee }: { employee: Employee }) {
     if (!conversation.id || conversation.status === "agent" || isSending) return;
     const id = conversation.id;
     const t = window.setInterval(() => {
-      api<Snapshot>(`/api/chat/conversation?id=${encodeURIComponent(id)}`)
+      api<Snapshot>(`/api/chat/conversation?id=${encodeURIComponent(id)}&${readParam()}`)
         .then((s) => {
           if (conversationIdRef.current === id) applySnapshot(s);
         })
@@ -104,7 +121,7 @@ export function ChatContainer({ employee }: { employee: Employee }) {
       case "conversation":
         setConversation(e.conversation);
         // Mensagens de sistema (ex.: divisor de transferência) e cards atualizados vêm do servidor.
-        void api<Snapshot>(`/api/chat/conversation?id=${encodeURIComponent(e.conversation.id)}`)
+        void api<Snapshot>(`/api/chat/conversation?id=${encodeURIComponent(e.conversation.id)}&${readParam()}`)
           .then(applySnapshot)
           .catch(() => {});
         break;

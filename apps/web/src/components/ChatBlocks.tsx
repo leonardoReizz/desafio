@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ArrowRight, Clock3 } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, ChevronRight, Clock3 } from "lucide-react";
 import { formatDateTime, formatDayMonth, formatRelativeDay } from "@/lib/format";
 import {
   AFFECTED_LABEL,
@@ -16,6 +16,7 @@ import {
 function StatusDot({ status }: { status: TicketSummary["status"] }) {
   return <i className={`status-dot status-${status}`} />;
 }
+const PAUSED_HINT = "O Nexo Assist está pausado enquanto um analista cuida da conversa";
 export type DraftEdit = { id: string; title: string; description: string };
 function DraftCard({
   draft,
@@ -127,7 +128,15 @@ function DraftCard({
     </div>
   );
 }
-function TicketSelect({ tickets, onSelect }: { tickets: TicketSummary[]; onSelect: (id: string, label: string) => void }) {
+function TicketSelect({
+  tickets,
+  onSelect,
+  disabled,
+}: {
+  tickets: TicketSummary[];
+  onSelect: (id: string, label: string) => void;
+  disabled: boolean;
+}) {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   return (
     <div className="ticket-select" role="group" aria-label="Selecione um chamado">
@@ -137,7 +146,7 @@ function TicketSelect({ tickets, onSelect }: { tickets: TicketSummary[]; onSelec
           key={ticket.id}
           className="ticket-option"
           aria-pressed={ticket.id === selectedTicketId}
-          disabled={selectedTicketId !== null}
+          disabled={disabled}
           onClick={() => {
             setSelectedTicketId(ticket.id);
             onSelect(ticket.id, `${ticket.id} · ${ticket.title}`);
@@ -153,6 +162,112 @@ function TicketSelect({ tickets, onSelect }: { tickets: TicketSummary[]; onSelec
           <time>{formatDayMonth(ticket.createdAt)}</time>
         </button>
       ))}
+    </div>
+  );
+}
+function TicketRow({
+  ticket,
+  onOpen,
+  disabled,
+}: {
+  ticket: TicketSummary;
+  onOpen: (id: string, label: string) => void;
+  disabled: boolean;
+}) {
+  const closed = ticket.status === "resolvido" || ticket.status === "fechado";
+  return (
+    <li>
+      <button
+        type="button"
+        className="ticket-row"
+        disabled={disabled}
+        title={disabled ? PAUSED_HINT : `Ver detalhes do ${ticket.id}`}
+        onClick={() => onOpen(ticket.id, `${ticket.id} · ${ticket.title}`)}
+      >
+        <span className="ticket-row-main">
+          <span className="ticket-row-id">{ticket.id}</span>
+          <strong>{ticket.title}</strong>
+        </span>
+        <span className="ticket-row-badges">
+          <span className={`badge badge-status-${ticket.status}`}>
+            <StatusDot status={ticket.status} />
+            {STATUS_LABEL[ticket.status]}
+          </span>
+          {!closed && (
+            <span className={`badge badge-priority-${ticket.priority}`}>
+              <i className={`status-dot priority-${ticket.priority}`} />
+              {PRIORITY_LABEL[ticket.priority]}
+            </span>
+          )}
+          {closed ? (
+            ticket.resolvedAt && (
+              <span className="badge badge-muted">
+                <CheckCircle2 size={12} />
+                {formatDayMonth(ticket.resolvedAt)}
+              </span>
+            )
+          ) : ticket.sla.overdue ? (
+            <span className="badge badge-overdue">
+              <AlertTriangle size={12} />
+              Prazo vencido
+            </span>
+          ) : (
+            <span className="badge badge-muted">
+              <Clock3 size={12} />
+              {ticket.sla.label}
+            </span>
+          )}
+        </span>
+        <ChevronRight size={16} className="ticket-row-chevron" aria-hidden />
+      </button>
+    </li>
+  );
+}
+function TicketList({
+  open,
+  closed,
+  onOpen,
+  disabled,
+}: {
+  open: TicketSummary[];
+  closed: TicketSummary[];
+  onOpen: (id: string, label: string) => void;
+  disabled: boolean;
+}) {
+  const overdue = open.filter((t) => t.sla.overdue).length;
+  return (
+    <div className="ticket-list" role="group" aria-label="Seus chamados">
+      <div className="ticket-list-head">
+        <span>Seus chamados</span>
+        <span className="ticket-list-counts">
+          <span className="badge badge-muted">{open.length} abertos</span>
+          {overdue > 0 && (
+            <span className="badge badge-overdue">
+              {overdue} vencido{overdue > 1 ? "s" : ""}
+            </span>
+          )}
+        </span>
+      </div>
+      {open.length > 0 && (
+        <section>
+          <h4>Abertos</h4>
+          <ul>
+            {open.map((t) => (
+              <TicketRow key={t.id} ticket={t} onOpen={onOpen} disabled={disabled} />
+            ))}
+          </ul>
+        </section>
+      )}
+      {closed.length > 0 && (
+        <section>
+          <h4>Encerrados</h4>
+          <ul>
+            {closed.map((t) => (
+              <TicketRow key={t.id} ticket={t} onOpen={onOpen} disabled={disabled} />
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
@@ -201,6 +316,7 @@ function TicketCard({ ticket }: { ticket: TicketView }) {
 }
 export function ChatBlock({
   block,
+  interactive = true,
   selectedQuickReply,
   editingDraft,
   onEditChange,
@@ -213,6 +329,8 @@ export function ChatBlock({
   onCancelDraft,
 }: {
   block: UiBlock;
+  /** false quando a conversa está com analista: o agent não responde, então cliques não teriam efeito. */
+  interactive?: boolean;
   selectedQuickReply?: string | null;
   editingDraft?: DraftEdit | null;
   onEditChange: (edit: DraftEdit) => void;
@@ -234,6 +352,7 @@ export function ChatBlock({
               type="button"
               key={option.value}
               className={`quick-chip ${selectedQuickReply === option.value ? "selected" : ""}`}
+              disabled={!interactive}
               onClick={() => onQuickReply(option.value, option.label)}
             >
               {option.label}
@@ -242,7 +361,9 @@ export function ChatBlock({
         </div>
       </div>
     );
-  if (block.kind === "ticket_select") return <TicketSelect tickets={block.tickets} onSelect={onSelectTicket} />;
+  if (block.kind === "ticket_select") return <TicketSelect tickets={block.tickets} onSelect={onSelectTicket} disabled={!interactive} />;
+  if (block.kind === "ticket_list")
+    return <TicketList open={block.open} closed={block.closed} onOpen={onSelectTicket} disabled={!interactive} />;
   if (block.kind === "ticket_card") return <TicketCard ticket={block.ticket} />;
   if (block.kind === "draft")
     return (

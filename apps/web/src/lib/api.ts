@@ -19,6 +19,11 @@ async function readError(res: Response): Promise<ApiRequestError> {
   }
 }
 
+/** "read=1" só quando a aba está visível: é o que conta como mensagem lida (confirmação ✓✓). */
+export function readParam(): string {
+  return typeof document !== "undefined" && document.visibilityState === "visible" ? "read=1" : "read=0";
+}
+
 /** fetch tipado para as rotas /api; redireciona para o login se a sessão expirou. */
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;

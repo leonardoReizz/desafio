@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowLeft,
   ArrowUpRight,
   Bot,
-  CheckCheck,
   ChevronRight,
   CircleCheck,
+  FileText,
   Headset,
   MessageCircle,
   MoreVertical,
@@ -27,6 +28,7 @@ import {
 import { avatarTone, formatClock, formatDayMarker, formatDayMonth, formatListTime, initials } from "@/lib/format";
 import { Brand } from "./Brand";
 import { LogoutButton } from "./LogoutButton";
+import { isReadBy, ReadReceipt } from "./ReadReceipt";
 import { DecisionTracePanel } from "./DecisionTracePanel";
 
 const filterLabels: { id: ConversationListFilter; label: string }[] = [
@@ -123,6 +125,14 @@ export function ConsoleView({
       messageViewport.current.scrollTop = messageViewport.current.scrollHeight;
   }, [detail?.conversation.status, detail?.messages.length]);
   const [showTickets, setShowTickets] = useState(true);
+  // Celular: um painel por vez (lista ↔ conversa). Telas estreitas: chamados viram gaveta sobreposta.
+  const [pane, setPane] = useState<"list" | "chat">("list");
+  const [ticketsDrawer, setTicketsDrawer] = useState(false);
+  const isNarrow = () => typeof window !== "undefined" && window.matchMedia("(max-width: 1050px)").matches;
+  function toggleTickets(open: boolean) {
+    if (isNarrow()) setTicketsDrawer(open);
+    else setShowTickets(open);
+  }
   // Filtro e busca são aplicados no servidor; aqui só renderizamos.
   const filtered = items;
   const status = detail?.conversation.status;
@@ -143,10 +153,10 @@ export function ConsoleView({
     setDraft("");
   }
   return (
-    <main className="console-shell">
+    <main className={`console-shell pane-${pane} ${showTickets ? "" : "no-tickets"} ${ticketsDrawer ? "tickets-open" : ""}`}>
       <aside className="console-rail">
         <Brand compact />
-        <button type="button" className="rail-current" aria-label="Conversas">
+        <button type="button" className="rail-current" aria-label="Conversas" onClick={() => setPane("list")}>
           <MessageCircle size={22} />
           {counts.para_voce > 0 && <span>{counts.para_voce}</span>}
         </button>
@@ -218,7 +228,10 @@ export function ConsoleView({
                   type="button"
                   className={`conversation-item ${item.id === selectedId ? "selected" : ""}`}
                   key={item.id}
-                  onClick={() => onSelect(item.id)}
+                  onClick={() => {
+                    onSelect(item.id);
+                    setPane("chat");
+                  }}
                 >
                   <span className={`list-avatar ${avatarTone(item.employee.id)}`}>
                     {initials(item.employee.name)}
@@ -258,6 +271,17 @@ export function ConsoleView({
         ) : (
           <>
             <header className="console-chat-header">
+              <button
+                type="button"
+                className="icon-button mobile-back"
+                onClick={() => {
+                  setPane("list");
+                  setTicketsDrawer(false);
+                }}
+                aria-label="Voltar para as conversas"
+              >
+                <ArrowLeft size={20} />
+              </button>
               <span className={`avatar ${avatarTone(detail.employee.id)}`}>{initials(detail.employee.name)}</span>
               <div className="console-person">
                 <strong>{detail.employee.name}</strong>
@@ -293,6 +317,15 @@ export function ConsoleView({
                         : `Com ${detail.assignedAnalyst?.name ?? "outro analista"}`}
                   </span>
                 )}
+                <button
+                  type="button"
+                  className="icon-button tickets-toggle"
+                  onClick={() => toggleTickets(isNarrow() ? !ticketsDrawer : !showTickets)}
+                  aria-label="Chamados do funcionário"
+                  aria-pressed={showTickets}
+                >
+                  <FileText size={19} />
+                </button>
                 <button type="button" className="icon-button" aria-label="Pesquisar na conversa">
                   <Search size={21} />
                 </button>
@@ -335,7 +368,7 @@ export function ConsoleView({
                             {message.text}
                             <small>
                               {formatClock(message.createdAt)}
-                              <CheckCheck size={14} />
+                              <ReadReceipt read={isReadBy(detail.conversation.employeeReadAt, message.createdAt)} />
                             </small>
                           </button>
                         ) : (
@@ -343,7 +376,9 @@ export function ConsoleView({
                             {message.text}
                             <small>
                               {formatClock(message.createdAt)}
-                              {message.role !== "user" && <CheckCheck size={14} />}
+                              {message.role !== "user" && (
+                                <ReadReceipt read={isReadBy(detail.conversation.employeeReadAt, message.createdAt)} />
+                              )}
                             </small>
                           </div>
                         )}
@@ -419,7 +454,7 @@ export function ConsoleView({
           </>
         )}
       </section>
-      {showTickets && (
+      {
         <aside className="ticket-history">
           <header>
             <div>
@@ -432,7 +467,7 @@ export function ConsoleView({
                     } encerrados`}
               </small>
             </div>
-            <button type="button" className="icon-button" onClick={() => setShowTickets(false)} aria-label="Fechar painel de chamados">
+            <button type="button" className="icon-button" onClick={() => toggleTickets(false)} aria-label="Fechar painel de chamados">
               <X size={21} />
             </button>
           </header>
@@ -477,7 +512,7 @@ export function ConsoleView({
             </button>
           </footer>
         </aside>
-      )}
+      }
     </main>
   );
 }

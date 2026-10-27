@@ -96,6 +96,51 @@ describe("runEmployeeTurn", () => {
     expect(msg.trace?.rulesApplied.join(" ")).toMatch(/vencido/);
   });
 
+  it("lista de chamados vira um card agrupado, com encerrados separados", async () => {
+    const runner = fakeRunner(async (tools) => {
+      await call(tools, "listar_meus_chamados", { incluirEncerrados: true, mostrarSelecao: false });
+      await call(tools, "listar_meus_chamados", { incluirEncerrados: true, mostrarSelecao: false });
+      return decision({ resposta: "Aqui estão seus chamados. O INC-20311 está com prazo vencido." });
+    });
+    await runEmployeeTurn({ employee: ana, conversationId: null, text: "resumo dos meus chamados", action: null }, s.opts(runner));
+    const blocks = s.lastAgent()!.blocks;
+    expect(blocks.map((b) => b.kind)).toEqual(["ticket_list"]);
+    const list = blocks[0] as Extract<(typeof blocks)[number], { kind: "ticket_list" }>;
+    expect(list.open.map((t) => t.id)).toContain("INC-20311");
+    expect(list.open.find((t) => t.id === "INC-20311")?.sla.overdue).toBe(true);
+    expect(list.closed.length).toBeGreaterThan(0);
+    expect(list.closed.every((t) => t.status === "resolvido" || t.status === "fechado")).toBe(true);
+  });
+
+  it("abrir um chamado encerrado pela lista mostra o card e oferece reabrir", async () => {
+    const runner = fakeRunner(async () => decision({}));
+    await runEmployeeTurn(
+      { employee: ana, conversationId: null, text: "INC-20150 · Senha do SAP", action: { kind: "select_ticket", ticketId: "INC-20150" } },
+      s.opts(runner),
+    );
+    const msg = s.lastAgent()!;
+    expect(runner.calls).toBe(0);
+    expect(msg.blocks.map((b) => b.kind)).toEqual(["ticket_card"]);
+    expect(msg.text).toMatch(/resolvido/);
+  });
+
+  it("pedido de analista citando um chamado vincula esse chamado, não o último em foco", async () => {
+    const runner = fakeRunner(async () => decision({}));
+    await runEmployeeTurn(
+      { employee: ana, conversationId: null, text: "REQ-10442", action: { kind: "select_ticket", ticketId: "REQ-10442" } },
+      s.opts(runner),
+    );
+    const id = s.conversationId();
+    await runEmployeeTurn(
+      { employee: ana, conversationId: id, text: "Quero falar com um analista sobre o INC-20311", action: null },
+      s.opts(runner),
+    );
+    const conv = s.conversations.get(id)!;
+    expect(conv.status).toBe("waiting_human");
+    expect(conv.relatedTicketId).toBe("INC-20311");
+    expect(conv.handoffReason).toBe("chamado_vencido");
+  });
+
   it("não deixa o funcionário ver chamado de outra pessoa", async () => {
     const runner = fakeRunner(async (tools) => {
       const r = (await call(tools, "consultar_chamado", { chamado: "INC-20322", mostrarCard: true })) as { ok?: boolean; erro?: string };

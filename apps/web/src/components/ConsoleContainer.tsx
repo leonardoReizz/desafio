@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Analyst, ConversationDetail, ConversationListFilter, ConversationListItem } from "@nexo/contracts";
-import { api, ApiRequestError } from "@/lib/api";
+import { api, ApiRequestError, readParam } from "@/lib/api";
 import { ConsoleView } from "./ConsoleView";
 
 const POLL_MS = 3000;
@@ -48,7 +48,7 @@ export function ConsoleContainer({ analyst }: { analyst: Analyst }) {
 
   const loadDetail = useCallback(async (id: string) => {
     try {
-      const data = await api<Detail>(`/api/console/conversations/${encodeURIComponent(id)}`);
+      const data = await api<Detail>(`/api/console/conversations/${encodeURIComponent(id)}?${readParam()}`);
       if (selectedRef.current === id) setDetail(data);
     } catch (e) {
       if (selectedRef.current === id) setError(message(e));
@@ -74,6 +74,15 @@ export function ConsoleContainer({ analyst }: { analyst: Analyst }) {
       window.clearInterval(t);
     };
   }, [selectedId, loadDetail]);
+
+  // Voltar para a aba conta como leitura da conversa aberta.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible" && selectedRef.current) void loadDetail(selectedRef.current);
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [loadDetail]);
 
   // Ao trocar de conversa, não mostra o detalhe da anterior enquanto carrega.
   const shownDetail = detail?.conversation.id === selectedId ? detail : null;

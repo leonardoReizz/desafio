@@ -25,6 +25,7 @@ interface ConversationRow {
   last_confidence: number | null;
   user_message_count: number;
   analyst_read_at: string | null;
+  employee_read_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -44,7 +45,6 @@ interface MessageRow {
 
 export interface StoredConversation extends Conversation {
   handoffAt: string | null;
-  analystReadAt: string | null;
 }
 
 export interface NewMessage {
@@ -70,11 +70,12 @@ function toConversation(r: ConversationRow): StoredConversation {
       relatedTicketId: r.related_ticket_id,
       lastConfidence: r.last_confidence,
       userMessageCount: r.user_message_count,
+      employeeReadAt: r.employee_read_at,
+      analystReadAt: r.analyst_read_at,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     }),
     handoffAt: r.handoff_at,
-    analystReadAt: r.analyst_read_at,
   };
 }
 
@@ -144,7 +145,6 @@ export class ConversationRepository {
       assignedAnalystId: string | null;
       relatedTicketId: string | null;
       lastConfidence: number | null;
-      analystReadAt: string | null;
     }>,
   ): void {
     const cols: Record<string, string> = {
@@ -155,7 +155,6 @@ export class ConversationRepository {
       assignedAnalystId: "assigned_analyst_id",
       relatedTicketId: "related_ticket_id",
       lastConfidence: "last_confidence",
-      analystReadAt: "analyst_read_at",
     };
     const entries = Object.entries(patch).filter(([k]) => k in cols);
     if (entries.length === 0) return;
@@ -165,6 +164,12 @@ export class ConversationRepository {
       updatedAt: this.now().toISOString(),
       id,
     });
+  }
+
+  /** Registra até quando um lado leu a conversa. Não mexe em updated_at (não reordena a fila). */
+  markRead(id: string, side: "employee" | "analyst", at: string): void {
+    const col = side === "employee" ? "employee_read_at" : "analyst_read_at";
+    this.db.prepare(`UPDATE conversations SET ${col} = ? WHERE id = ? AND (${col} IS NULL OR ${col} < ?)`).run(at, id, at);
   }
 
   addMessage(conversationId: string, m: NewMessage): ChatMessage {

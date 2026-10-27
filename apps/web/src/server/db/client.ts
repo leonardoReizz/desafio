@@ -33,6 +33,7 @@ const MIGRATION = `
     last_confidence REAL,
     user_message_count INTEGER NOT NULL DEFAULT 0,
     analyst_read_at TEXT,
+    employee_read_at TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
@@ -83,6 +84,9 @@ export function openAppDatabase(path: string): Database.Database {
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   db.exec(MIGRATION);
+  // Bancos criados antes da confirmação de leitura do funcionário.
+  const cols = db.prepare<[], { name: string }>("PRAGMA table_info(conversations)").all();
+  if (!cols.some((c) => c.name === "employee_read_at")) db.exec("ALTER TABLE conversations ADD COLUMN employee_read_at TEXT");
   seedUsers(db);
   return db;
 }
