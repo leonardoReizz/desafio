@@ -57,7 +57,8 @@ Configuração no CapRover (app `desafio`):
 1. **Container HTTP Port**: `3000`; HTTPS habilitado.
 2. **Persistent directory**: `/data` (bancos SQLite de conversas e chamados — sobrevivem a deploys).
 3. **Variáveis de ambiente**: `TICKETS_SERVICE_TOKEN` (`openssl rand -hex 32`), `FAL_KEY`, `LLM_PROVIDER=fal` e
-   `DEMO_DAILY_LLM_BUDGET` (ex.: `300`, protege o crédito num link público). Caminhos de banco e portas
+   `DEMO_DAILY_LLM_BUDGET` (ex.: `300`, protege o crédito num link público) e, se quiser fechar o acesso,
+   `DEMO_PASSWORD`. Caminhos de banco e portas
    internas já vêm da imagem — não defina `APP_DB_PATH`, `TICKETS_DB_PATH` nem `TICKETS_SERVICE_URL`.
 4. Se o pacote no GHCR for privado, cadastre o registry `ghcr.io` no CapRover (usuário do GitHub + token
    com `read:packages`).
@@ -171,8 +172,14 @@ Uso consciente do modelo:
 - Toda rota valida sessão, papel (funcionário × analista) e dono do recurso; entradas validadas com zod;
   erros sem detalhes internos. Analista só responde depois de assumir.
 - Serviço de chamados exige token de serviço e filtra por solicitante (defesa em profundidade).
-- Rate limit por usuário (chat) e por IP (login); orçamento diário de chamadas ao LLM (`DEMO_DAILY_LLM_BUDGET`)
-  para deploys públicos; cabeçalhos de segurança.
+- Rate limit por usuário no chat (`RATE_LIMIT_PER_MINUTE`) e nas ações do console
+  (`CONSOLE_RATE_LIMIT_PER_MINUTE`), e por IP no login — o IP vem do proxy (`X-Real-IP` / último valor de
+  `X-Forwarded-For`), não do que o cliente envia. Orçamento diário de chamadas ao LLM (`DEMO_DAILY_LLM_BUDGET`).
+- Login com mensagem única para e-mail inexistente ou senha errada; em deploy público, `DEMO_PASSWORD`
+  exige uma senha (sem ela, vale a regra do protótipo: qualquer senha).
+- Cabeçalhos de segurança (`nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` e HSTS
+  em produção). SQL só com parâmetros (nomes de coluna dinâmicos vêm de lista fixa); `pnpm audit` sem
+  vulnerabilidades conhecidas.
 
 ## Principais trade-offs
 

@@ -16,6 +16,10 @@ const Env = z.object({
   TICKETS_SERVICE_TOKEN: z.string().min(16, "defina TICKETS_SERVICE_TOKEN (>= 16 caracteres)"),
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(12),
   DEMO_DAILY_LLM_BUDGET: z.coerce.number().int().min(0).default(0),
+  /** Senha única exigida no login quando definida (deploy público). Vazia = qualquer senha. */
+  DEMO_PASSWORD: z.string().optional(),
+  /** Ações do analista por minuto (assumir, responder, mexer em chamado). */
+  CONSOLE_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(60),
 });
 export type Env = z.infer<typeof Env>;
 

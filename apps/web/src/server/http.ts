@@ -23,12 +23,14 @@ export async function parseJson<S extends z.ZodType>(req: Request, schema: S): P
 }
 
 export class BadRequest extends Error {}
+export class RateLimited extends Error {}
 export class NotFound extends Error {}
 
 /** Mapeia erros conhecidos para respostas sem detalhes internos; o resto vira 500 genérico. */
 export function handleError(e: unknown): NextResponse {
   if (e instanceof AuthError) return jsonError(e.status, e.status === 401 ? "unauthenticated" : "forbidden", e.message);
   if (e instanceof BadRequest) return jsonError(400, "invalid_input", e.message);
+  if (e instanceof RateLimited) return jsonError(429, "rate_limited", "Muitas ações em pouco tempo. Aguarde alguns segundos.");
   if (e instanceof NotFound) return jsonError(404, "not_found", e.message);
   if (e instanceof InvalidTransitionError)
     return jsonError(409, "invalid_transition", "A conversa não está em um estado que permita essa ação.");

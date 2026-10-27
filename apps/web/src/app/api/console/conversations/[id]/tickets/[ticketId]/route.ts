@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AnalystTicketStatus } from "@nexo/contracts";
 import { requireAnalyst } from "@/server/auth/session";
+import { limitAnalystAction } from "@/server/rate-limit";
 import { conversations, ticketsClient, users } from "@/server/container";
 import { updateTicket } from "@/server/console/service";
 import { BadRequest, parseJson, route } from "@/server/http";
@@ -15,6 +16,7 @@ const Body = z.object({
 export async function POST(req: Request, ctx: { params: Promise<{ id: string; ticketId: string }> }) {
   return route(async () => {
     const analyst = await requireAnalyst();
+    limitAnalystAction(analyst.id);
     const { id, ticketId } = await ctx.params;
     if (!/^(INC|REQ)-\d{5}$/.test(ticketId)) throw new BadRequest("Chamado inválido");
     const body = await parseJson(req, Body);
