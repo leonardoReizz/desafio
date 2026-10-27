@@ -20,7 +20,13 @@ function toUser(row: UserRow): SessionUser {
   }
   return {
     role: "employee",
-    employee: { id: row.id, name: row.name, email: row.email, department: row.department ?? "", passwordChangedAt: row.password_changed_at },
+    employee: {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      department: row.department ?? "",
+      passwordChangedAt: row.password_changed_at,
+    },
   };
 }
 

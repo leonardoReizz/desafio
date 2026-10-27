@@ -92,7 +92,10 @@ export async function showTicket(ctx: TurnContext, ticketId: string, opts: { car
   });
   const view = toTicketView(ticket, now);
   ctx.recorder.note("calcular_prazo", "calculou o prazo", `prazo ${SLA_TEXT[view.priority]} → ${view.sla.label}`);
-  if (view.sla.overdue) ctx.recorder.rules.add(`Prazo de ${SLA_TEXT[view.priority]} para prioridade ${PRIORITY_LABEL[view.priority].toLowerCase()} vencido → oferecer analista`);
+  if (view.sla.overdue)
+    ctx.recorder.rules.add(
+      `Prazo de ${SLA_TEXT[view.priority]} para prioridade ${PRIORITY_LABEL[view.priority].toLowerCase()} vencido → oferecer analista`,
+    );
   ctx.recorder.focusTicketId = view.id;
   if (opts.card) ctx.recorder.blocks.push({ kind: "ticket_card", ticket: view });
   ctx.deps.conversations.update(ctx.conversation.id, { relatedTicketId: view.id });
@@ -128,7 +131,8 @@ export async function prepareDraft(ctx: TurnContext, input: DraftInput): Promise
     const mine = await ctx.recorder.run("verificar_duplicidade", "verificou chamados parecidos", async () => {
       const { data, attempts } = await ctx.deps.tickets.listByRequester(ctx.employee.id);
       const match = findDuplicate(data, input, now);
-      const detail = match.kind === "none" ? "nenhum chamado parecido" : `${match.ticket.id} parecido (${Math.round(match.similarity * 100)}%)`;
+      const detail =
+        match.kind === "none" ? "nenhum chamado parecido" : `${match.ticket.id} parecido (${Math.round(match.similarity * 100)}%)`;
       return { result: match, detail, attempts };
     });
     if (mine.kind === "open") {
@@ -192,7 +196,11 @@ export async function prepareDraft(ctx: TurnContext, input: DraftInput): Promise
     resultTicketId: null,
   };
   ctx.deps.conversations.saveDraft(ctx.conversation.id, ctx.employee.id, draft);
-  ctx.recorder.note("montar_rascunho", "montou o rascunho", `${draft.id} · ${modeLabel(draft)} · ${CATEGORY_LABEL[draft.category]} · ${PRIORITY_LABEL[draft.priority]}`);
+  ctx.recorder.note(
+    "montar_rascunho",
+    "montou o rascunho",
+    `${draft.id} · ${modeLabel(draft)} · ${CATEGORY_LABEL[draft.category]} · ${PRIORITY_LABEL[draft.priority]}`,
+  );
   ctx.recorder.rules.add("Rascunho mostrado; criação só após confirmação do funcionário");
   ctx.recorder.blocks.push({ kind: "draft", draft });
   return { draft, adjustedBecause };
@@ -218,7 +226,11 @@ export async function confirmDraft(ctx: TurnContext, draftId: string): Promise<{
 
   const ticket = await ctx.recorder.run(
     draft.mode === "create" ? "criar_chamado" : "atualizar_chamado",
-    draft.mode === "create" ? "criou o chamado" : draft.mode === "update" ? `atualizou o ${draft.targetTicketId}` : `reabriu o ${draft.targetTicketId}`,
+    draft.mode === "create"
+      ? "criou o chamado"
+      : draft.mode === "update"
+        ? `atualizou o ${draft.targetTicketId}`
+        : `reabriu o ${draft.targetTicketId}`,
     async () => {
       if (draft.mode === "create") {
         const { data, attempts } = await ctx.deps.tickets.create(
@@ -280,9 +292,20 @@ export function offerOptions(ctx: TurnContext, question: string | null, options:
   ctx.recorder.blocks.push({ kind: "quick_replies", question, options: options.slice(0, 5) });
 }
 
-export function requestHandoff(ctx: TurnContext, reason: HandoffReason, summary: string, ticketId: string | null, critical = false): HandoffRequest {
+export function requestHandoff(
+  ctx: TurnContext,
+  reason: HandoffReason,
+  summary: string,
+  ticketId: string | null,
+  critical = false,
+): HandoffRequest {
   const team: "N1" | "N2" = critical || reason === "chamado_vencido" || reason === "baixa_confianca" ? "N2" : "N1";
-  const req: HandoffRequest = { reason, summary, team, ticketId: ticketId ?? ctx.recorder.focusTicketId ?? ctx.conversation.relatedTicketId };
+  const req: HandoffRequest = {
+    reason,
+    summary,
+    team,
+    ticketId: ticketId ?? ctx.recorder.focusTicketId ?? ctx.conversation.relatedTicketId,
+  };
   ctx.recorder.handoff = req;
   ctx.recorder.rules.add(
     {
@@ -341,7 +364,11 @@ export function overdueOfferOptions(): QuickReplyOption[] {
 
 export function buildHandoffSummary(ctx: TurnContext, reason: HandoffReason, recent: readonly { role: string; text: string }[]): string {
   const ticket = ctx.recorder.focusTicketId ?? ctx.conversation.relatedTicketId;
-  const lastUser = recent.filter((m) => m.role === "user").slice(-3).map((m) => `“${m.text}”`).join(" ");
+  const lastUser = recent
+    .filter((m) => m.role === "user")
+    .slice(-3)
+    .map((m) => `“${m.text}”`)
+    .join(" ");
   const why = {
     pedido_do_funcionario: "Funcionário pediu para falar com um analista.",
     caso_critico: "Caso crítico.",

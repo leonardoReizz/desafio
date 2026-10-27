@@ -205,7 +205,11 @@ export class TicketRepository {
       const ticket = this.getForRequester(id, requesterId);
       if (!OPEN_STATUSES.includes(ticket.status)) throw new DomainError("not_open", `Chamado ${id} não está aberto`);
       const at = this.now().toISOString();
-      this.insertUpdate(id, { author: "sistema", authorName: "Nexo Assist", text: `Transferido para Suporte ${input.team}. Resumo: ${input.summary}` }, at);
+      this.insertUpdate(
+        id,
+        { author: "sistema", authorName: "Nexo Assist", text: `Transferido para Suporte ${input.team}. Resumo: ${input.summary}` },
+        at,
+      );
       this.db
         .prepare("UPDATE tickets SET assigned_team = ?, status = 'aguardando_analista', updated_at = ? WHERE id = ?")
         .run(input.team, at, id);

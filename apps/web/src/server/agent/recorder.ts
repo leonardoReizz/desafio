@@ -35,7 +35,14 @@ export class TurnRecorder {
     try {
       const out = await fn();
       const attempts = out.attempts ?? 1;
-      this.push({ tool, label, status: attempts > 1 ? "recuperado" : "ok", durationMs: Date.now() - started, detail: out.detail, attempts });
+      this.push({
+        tool,
+        label,
+        status: attempts > 1 ? "recuperado" : "ok",
+        durationMs: Date.now() - started,
+        detail: out.detail,
+        attempts,
+      });
       return out.result;
     } catch (e) {
       const attempts = e instanceof TicketServiceUnavailableError ? Math.max(e.attempts, 1) : 1;

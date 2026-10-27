@@ -70,7 +70,7 @@ export function buildSeedTickets(now: Date): Ticket[] {
       id: "REQ-10442",
       type: "REQ",
       title: "Segundo monitor para home office",
-      description: "Solicito um segundo monitor 24\" para trabalho remoto.",
+      description: 'Solicito um segundo monitor 24" para trabalho remoto.',
       category: "hardware",
       subcategory: "Periféricos",
       priority: "baixa",

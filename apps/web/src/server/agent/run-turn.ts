@@ -67,7 +67,9 @@ export async function runEmployeeTurn(input: TurnInput, opts: TurnOptions): Prom
   const started = Date.now();
 
   // 1. Conversa: só a do próprio funcionário; encerrada → começa outra.
-  let conversation: StoredConversation | null = input.conversationId ? deps.conversations.getOwned(input.conversationId, input.employee.id) : null;
+  let conversation: StoredConversation | null = input.conversationId
+    ? deps.conversations.getOwned(input.conversationId, input.employee.id)
+    : null;
   if (input.conversationId && !conversation) {
     emit({ type: "error", code: "conversation_not_found", message: "Conversa não encontrada." });
     return;
@@ -113,7 +115,11 @@ export async function runEmployeeTurn(input: TurnInput, opts: TurnOptions): Prom
         rules: [],
         text: "O limite diário de uso do assistente nesta demonstração foi atingido. Você ainda pode consultar seus chamados ou falar com um analista.",
       };
-      recorder.blocks.push({ kind: "quick_replies", question: null, options: [{ label: "Falar com um analista", value: "falar_com_analista" }] });
+      recorder.blocks.push({
+        kind: "quick_replies",
+        question: null,
+        options: [{ label: "Falar com um analista", value: "falar_com_analista" }],
+      });
     } else {
       const result = await runLlm(ctx, input, opts);
       decision = result.decision;
@@ -126,15 +132,23 @@ export async function runEmployeeTurn(input: TurnInput, opts: TurnOptions): Prom
 
   // 5. Pós-checagens em código.
   if (decision.confidence < CONFIDENCE_THRESHOLD && !recorder.handoff) {
-    recorder.guardrails.add(`Confiança ${Math.round(decision.confidence * 100)}% abaixo de ${CONFIDENCE_THRESHOLD * 100}% → analista chamado`);
+    recorder.guardrails.add(
+      `Confiança ${Math.round(decision.confidence * 100)}% abaixo de ${CONFIDENCE_THRESHOLD * 100}% → analista chamado`,
+    );
     const recent = deps.conversations.recentMessages(conversation.id, 6);
     requestHandoff(ctx, "baixa_confianca", buildHandoffSummary(ctx, "baixa_confianca", recent), null);
-    decision = { ...decision, action: "transferiu", text: `${decision.text}\n\nComo não tenho certeza do melhor caminho, vou chamar um analista para isso.`.trim() };
+    decision = {
+      ...decision,
+      action: "transferiu",
+      text: `${decision.text}\n\nComo não tenho certeza do melhor caminho, vou chamar um analista para isso.`.trim(),
+    };
   }
   if (recorder.handoff) {
     const eta = await applyHandoff(ctx, recorder.handoff);
     if (decision.action !== "transferiu") decision = { ...decision, action: "transferiu" };
-    if (!/analista/i.test(decision.text)) decision.text = `${decision.text}\n\nEncaminhei para o Suporte ${recorder.handoff.team}. Um analista vai falar com você ${eta}.`.trim();
+    if (!/analista/i.test(decision.text))
+      decision.text =
+        `${decision.text}\n\nEncaminhei para o Suporte ${recorder.handoff.team}. Um analista vai falar com você ${eta}.`.trim();
   }
 
   // 6. Persiste a resposta com o trace completo.
@@ -266,11 +280,20 @@ async function deterministicRoute(ctx: TurnContext, input: TurnInput): Promise<D
   return null;
 }
 
-async function runLlm(ctx: TurnContext, input: TurnInput, opts: TurnOptions): Promise<{ decision: Decision; model: string; usage: DecisionTrace["usage"] }> {
+async function runLlm(
+  ctx: TurnContext,
+  input: TurnInput,
+  opts: TurnOptions,
+): Promise<{ decision: Decision; model: string; usage: DecisionTrace["usage"] }> {
   const history = ctx.deps.conversations.recentMessages(ctx.conversation.id, HISTORY_WINDOW);
   const messages = toLlmMessages(history, contextBlock(ctx));
   const tools = createAgentTools(ctx, input.text);
-  const result = await opts.runner.run({ messages, tools, onReplyDelta: (delta) => opts.emit({ type: "text_delta", delta }), signal: opts.signal });
+  const result = await opts.runner.run({
+    messages,
+    tools,
+    onReplyDelta: (delta) => opts.emit({ type: "text_delta", delta }),
+    signal: opts.signal,
+  });
   if (result.usage) opts.recordUsage(result.usage);
 
   const d: AgentDecision | null = result.decision;
@@ -291,7 +314,15 @@ async function runLlm(ctx: TurnContext, input: TurnInput, opts: TurnOptions): Pr
     };
   }
   return {
-    decision: { intent: d.intencao, understood: d.entendimento, action: d.acao, confidence: d.confianca, rationale: d.justificativa, rules: d.regras, text: d.resposta },
+    decision: {
+      intent: d.intencao,
+      understood: d.entendimento,
+      action: d.acao,
+      confidence: d.confianca,
+      rationale: d.justificativa,
+      rules: d.regras,
+      text: d.resposta,
+    },
     model: result.model,
     usage: result.usage,
   };
@@ -301,14 +332,39 @@ function failureDecision(ctx: TurnContext, e: unknown): Decision {
   const base = { intent: "conversa" as const, understood: "—", rules: [] as string[] };
   if (e instanceof TicketServiceUnavailableError) {
     ctx.recorder.guardrails.add("Sistema de chamados indisponível: nenhuma alteração foi feita");
-    ctx.recorder.blocks.push({ kind: "quick_replies", question: null, options: [{ label: "Tentar de novo", value: "tentar_de_novo" }, { label: "Falar com um analista", value: "falar_com_analista" }] });
-    return { ...base, action: "respondeu", confidence: 1, rationale: "O legado não respondeu após as tentativas; informamos com transparência.", text: "O sistema de chamados está instável agora e não consegui concluir. Nada foi alterado — pode tentar de novo em instantes." };
+    ctx.recorder.blocks.push({
+      kind: "quick_replies",
+      question: null,
+      options: [
+        { label: "Tentar de novo", value: "tentar_de_novo" },
+        { label: "Falar com um analista", value: "falar_com_analista" },
+      ],
+    });
+    return {
+      ...base,
+      action: "respondeu",
+      confidence: 1,
+      rationale: "O legado não respondeu após as tentativas; informamos com transparência.",
+      text: "O sistema de chamados está instável agora e não consegui concluir. Nada foi alterado — pode tentar de novo em instantes.",
+    };
   }
   if (e instanceof DraftNotPendingError) {
-    return { ...base, action: "respondeu", confidence: 1, rationale: "O rascunho já tinha sido confirmado ou cancelado.", text: "Esse rascunho já foi confirmado ou cancelado." };
+    return {
+      ...base,
+      action: "respondeu",
+      confidence: 1,
+      rationale: "O rascunho já tinha sido confirmado ou cancelado.",
+      text: "Esse rascunho já foi confirmado ou cancelado.",
+    };
   }
   if (e instanceof TicketServiceError && e.status === 404) {
-    return { ...base, action: "respondeu", confidence: 1, rationale: "Chamado não pertence ao funcionário ou não existe.", text: "Não encontrei esse chamado entre os seus." };
+    return {
+      ...base,
+      action: "respondeu",
+      confidence: 1,
+      rationale: "Chamado não pertence ao funcionário ou não existe.",
+      text: "Não encontrei esse chamado entre os seus.",
+    };
   }
   if (e instanceof LlmNotConfiguredError) {
     ctx.recorder.guardrails.add("Modelo de linguagem não configurado (ANTHROPIC_API_KEY)");
@@ -316,9 +372,19 @@ function failureDecision(ctx: TurnContext, e: unknown): Decision {
     console.error("[agent] falha no turno", e instanceof Error ? e.message : "erro desconhecido");
     ctx.recorder.guardrails.add("Falha ao consultar o modelo de linguagem");
   }
-  ctx.recorder.blocks.push({ kind: "quick_replies", question: null, options: [{ label: "Falar com um analista", value: "falar_com_analista" }] });
+  ctx.recorder.blocks.push({
+    kind: "quick_replies",
+    question: null,
+    options: [{ label: "Falar com um analista", value: "falar_com_analista" }],
+  });
   // Confiança alta de propósito: a falha é técnica, não de entendimento; não transfere sozinho.
-  return { ...base, action: "respondeu", confidence: 1, rationale: "Falha técnica no assistente; oferecemos um analista.", text: "Tive um problema para processar sua mensagem agora. Pode tentar de novo ou falar com um analista." };
+  return {
+    ...base,
+    action: "respondeu",
+    confidence: 1,
+    rationale: "Falha técnica no assistente; oferecemos um analista.",
+    text: "Tive um problema para processar sua mensagem agora. Pode tentar de novo ou falar com um analista.",
+  };
 }
 
 function contextBlock(ctx: TurnContext): string {

@@ -5,13 +5,36 @@ export interface KbHit {
   score: number;
 }
 
-const STOPWORDS = new Set(["a", "o", "e", "de", "do", "da", "no", "na", "em", "um", "uma", "que", "meu", "minha", "com", "para", "por", "nao", "esta", "como", "os", "as"]);
+const STOPWORDS = new Set([
+  "a",
+  "o",
+  "e",
+  "de",
+  "do",
+  "da",
+  "no",
+  "na",
+  "em",
+  "um",
+  "uma",
+  "que",
+  "meu",
+  "minha",
+  "com",
+  "para",
+  "por",
+  "nao",
+  "esta",
+  "como",
+  "os",
+  "as",
+]);
 
 export function normalize(text: string): string[] {
   return text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9\s-]/g, " ")
     .split(/\s+/)
     .filter((t) => t.length > 1 && !STOPWORDS.has(t));

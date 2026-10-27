@@ -81,7 +81,14 @@ export class TicketsClient {
   }
 
   async addUpdate(ticketId: string, requesterId: string, input: AddUpdateInput, idempotencyKey: string): Promise<CallResult<Ticket>> {
-    const r = await this.request("POST", `/v1/tickets/${encodeURIComponent(ticketId)}/updates`, requesterId, TicketEnvelope, input, idempotencyKey);
+    const r = await this.request(
+      "POST",
+      `/v1/tickets/${encodeURIComponent(ticketId)}/updates`,
+      requesterId,
+      TicketEnvelope,
+      input,
+      idempotencyKey,
+    );
     return { data: r.data.ticket, attempts: r.attempts };
   }
 
@@ -124,7 +131,11 @@ export class TicketsClient {
         if (!res.ok) {
           const err = ApiError.safeParse(json);
           this.recordSuccess(); // respondeu: o serviço está de pé, o erro é de negócio
-          throw new TicketServiceError(res.status, err.success ? err.data.error.code : "unknown", err.success ? err.data.error.message : `HTTP ${res.status}`);
+          throw new TicketServiceError(
+            res.status,
+            err.success ? err.data.error.code : "unknown",
+            err.success ? err.data.error.message : `HTTP ${res.status}`,
+          );
         }
         this.recordSuccess();
         return { data: schema.parse(json), attempts: attempt };

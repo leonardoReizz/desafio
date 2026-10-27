@@ -29,9 +29,12 @@ export function handleError(e: unknown): NextResponse {
   if (e instanceof AuthError) return jsonError(e.status, e.status === 401 ? "unauthenticated" : "forbidden", e.message);
   if (e instanceof BadRequest) return jsonError(400, "invalid_input", e.message);
   if (e instanceof NotFound) return jsonError(404, "not_found", e.message);
-  if (e instanceof InvalidTransitionError) return jsonError(409, "invalid_transition", "A conversa não está em um estado que permita essa ação.");
-  if (e instanceof TicketServiceUnavailableError) return jsonError(503, "tickets_unavailable", "O sistema de chamados está instável. Tente de novo em instantes.");
-  if (e instanceof TicketServiceError) return jsonError(e.status === 404 ? 404 : 502, e.code, e.status === 404 ? "Não encontrado" : "Erro no sistema de chamados");
+  if (e instanceof InvalidTransitionError)
+    return jsonError(409, "invalid_transition", "A conversa não está em um estado que permita essa ação.");
+  if (e instanceof TicketServiceUnavailableError)
+    return jsonError(503, "tickets_unavailable", "O sistema de chamados está instável. Tente de novo em instantes.");
+  if (e instanceof TicketServiceError)
+    return jsonError(e.status === 404 ? 404 : 502, e.code, e.status === 404 ? "Não encontrado" : "Erro no sistema de chamados");
   console.error("[api] erro inesperado", e instanceof Error ? e.message : "desconhecido");
   return jsonError(500, "internal", "Erro inesperado. Tente de novo.");
 }

@@ -58,13 +58,7 @@ export const STATUS_LABEL: Record<TicketStatus, string> = {
 };
 
 /** Status em que o chamado ainda está "aberto" para efeito de duplicidade e SLA. */
-export const OPEN_STATUSES: readonly TicketStatus[] = [
-  "aberto",
-  "em_andamento",
-  "aguardando_analista",
-  "aguardando_usuario",
-  "aprovado",
-];
+export const OPEN_STATUSES: readonly TicketStatus[] = ["aberto", "em_andamento", "aguardando_analista", "aguardando_usuario", "aprovado"];
 
 export const TicketUpdate = z.object({
   id: z.string(),

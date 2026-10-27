@@ -20,7 +20,8 @@ const ticket = {
   updates: [],
 };
 
-const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const json = (status: number, body: unknown) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
 function client(responses: Array<() => Response | Promise<Response>>, now = () => 0) {
   const calls: Request[] = [];
@@ -45,7 +46,16 @@ describe("TicketsClient", () => {
   it("reusa a mesma Idempotency-Key em todas as tentativas de escrita", async () => {
     const { c, calls } = client([() => json(503, {}), () => json(201, { ticket })]);
     await c.create(
-      { type: "INC", title: "x título", description: "desc", category: "hardware", subcategory: null, priority: "media", affected: "so_eu", requesterId: "emp_ana" },
+      {
+        type: "INC",
+        title: "x título",
+        description: "desc",
+        category: "hardware",
+        subcategory: null,
+        priority: "media",
+        affected: "so_eu",
+        requesterId: "emp_ana",
+      },
       "draft-123",
     );
     expect(calls.map((r) => r.headers.get("idempotency-key"))).toEqual(["draft-123", "draft-123"]);

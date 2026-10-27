@@ -11,7 +11,13 @@ import type { AgentDecision, AgentRunner } from "./llm";
 import { runEmployeeTurn, type TurnOptions } from "./run-turn";
 
 const NOW = new Date("2026-10-21T13:05:00.000Z"); // qua 10:05 em Brasília
-const ana: Employee = { id: "emp_ana", name: "Ana Souza", email: "ana.souza@nexo.com.br", department: "Financeiro", passwordChangedAt: NOW.toISOString() };
+const ana: Employee = {
+  id: "emp_ana",
+  name: "Ana Souza",
+  email: "ana.souza@nexo.com.br",
+  department: "Financeiro",
+  passwordChangedAt: NOW.toISOString(),
+};
 
 type ToolMap = Parameters<AgentRunner["run"]>[0]["tools"];
 type Script = (tools: ToolMap) => Promise<AgentDecision>;
@@ -64,8 +70,10 @@ function setup(failureRate = 0) {
     consumeLlmBudget: () => true,
     recordUsage: () => {},
   });
-  const lastAgent = () => [...events].reverse().find((e): e is Extract<ChatStreamEvent, { type: "agent_message" }> => e.type === "agent_message")?.message;
-  const conversationId = () => events.find((e): e is Extract<ChatStreamEvent, { type: "user_message" }> => e.type === "user_message")!.message.conversationId;
+  const lastAgent = () =>
+    [...events].reverse().find((e): e is Extract<ChatStreamEvent, { type: "agent_message" }> => e.type === "agent_message")?.message;
+  const conversationId = () =>
+    events.find((e): e is Extract<ChatStreamEvent, { type: "user_message" }> => e.type === "user_message")!.message.conversationId;
   return { conversations, ticketRepo, events, opts, lastAgent, conversationId };
 }
 
@@ -77,7 +85,10 @@ describe("runEmployeeTurn", () => {
 
   it("seleção de chamado vencido não usa LLM e oferece analista", async () => {
     const runner = fakeRunner(async () => decision({}));
-    await runEmployeeTurn({ employee: ana, conversationId: null, text: "INC-20311 · Notebook lento", action: { kind: "select_ticket", ticketId: "INC-20311" } }, s.opts(runner));
+    await runEmployeeTurn(
+      { employee: ana, conversationId: null, text: "INC-20311 · Notebook lento", action: { kind: "select_ticket", ticketId: "INC-20311" } },
+      s.opts(runner),
+    );
     const msg = s.lastAgent()!;
     expect(runner.calls).toBe(0);
     expect(msg.blocks.map((b) => b.kind)).toEqual(["ticket_card", "quick_replies"]);
@@ -122,7 +133,10 @@ describe("runEmployeeTurn", () => {
 
     // "sim" confirma sem chamar o LLM.
     const confirmRunner = fakeRunner(async () => decision({}));
-    await runEmployeeTurn({ employee: ana, conversationId: s.conversationId(), text: "sim, pode criar", action: null }, s.opts(confirmRunner));
+    await runEmployeeTurn(
+      { employee: ana, conversationId: s.conversationId(), text: "sim, pode criar", action: null },
+      s.opts(confirmRunner),
+    );
     expect(confirmRunner.calls).toBe(0);
     expect(s.ticketRepo.listByRequester("emp_ana").length).toBe(before + 1);
     expect(s.lastAgent()!.trace?.action).toBe("criou_chamado");
@@ -171,8 +185,14 @@ describe("runEmployeeTurn", () => {
 
   it("pedido de analista com chamado vencido em foco transfere para N2 com resumo", async () => {
     const runner = fakeRunner(async () => decision({}));
-    await runEmployeeTurn({ employee: ana, conversationId: null, text: "x", action: { kind: "select_ticket", ticketId: "INC-20311" } }, s.opts(runner));
-    await runEmployeeTurn({ employee: ana, conversationId: s.conversationId(), text: "Quero falar com um analista.", action: null }, s.opts(runner));
+    await runEmployeeTurn(
+      { employee: ana, conversationId: null, text: "x", action: { kind: "select_ticket", ticketId: "INC-20311" } },
+      s.opts(runner),
+    );
+    await runEmployeeTurn(
+      { employee: ana, conversationId: s.conversationId(), text: "Quero falar com um analista.", action: null },
+      s.opts(runner),
+    );
     const conv = s.conversations.get(s.conversationId())!;
     expect(conv.status).toBe("waiting_human");
     expect(conv.handoffReason).toBe("chamado_vencido");
@@ -183,7 +203,10 @@ describe("runEmployeeTurn", () => {
   it("legado instável: informa com transparência e não altera nada", async () => {
     const flaky = setup(1);
     const runner = fakeRunner(async () => decision({}));
-    await runEmployeeTurn({ employee: ana, conversationId: null, text: "x", action: { kind: "select_ticket", ticketId: "INC-20311" } }, flaky.opts(runner));
+    await runEmployeeTurn(
+      { employee: ana, conversationId: null, text: "x", action: { kind: "select_ticket", ticketId: "INC-20311" } },
+      flaky.opts(runner),
+    );
     const msg = flaky.lastAgent()!;
     expect(msg.trace?.steps[0]?.status).toBe("erro");
     expect(msg.trace?.steps[0]?.attempts).toBe(3);

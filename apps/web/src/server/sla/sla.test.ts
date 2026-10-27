@@ -57,7 +57,12 @@ describe("SLA do chamado", () => {
 
   it("chamado média sem atualização há 6 dias está vencido", () => {
     const sla = computeSla(
-      { status: "aguardando_analista", priority: "media", createdAt: "2026-10-10T14:20:00-03:00", lastServiceUpdateAt: "2026-10-15T09:10:00-03:00" },
+      {
+        status: "aguardando_analista",
+        priority: "media",
+        createdAt: "2026-10-10T14:20:00-03:00",
+        lastServiceUpdateAt: "2026-10-15T09:10:00-03:00",
+      },
       now,
     );
     expect(sla.overdue).toBe(true);

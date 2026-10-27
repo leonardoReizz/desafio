@@ -4,9 +4,7 @@ import { normalize } from "../kb/search";
 const REOPEN_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type DuplicateMatch =
-  | { kind: "open"; ticket: Ticket; similarity: number }
-  | { kind: "reopenable"; ticket: Ticket; similarity: number }
-  | { kind: "none" };
+  { kind: "open"; ticket: Ticket; similarity: number } | { kind: "reopenable"; ticket: Ticket; similarity: number } | { kind: "none" };
 
 function similarity(a: string, b: string): number {
   const ta = new Set(normalize(a));
@@ -32,7 +30,10 @@ export function findDuplicate(
   let reopenable: { ticket: Ticket; similarity: number } | null = null;
   for (const t of tickets) {
     if (t.category !== draft.category) continue;
-    const score = Math.max(similarity(draft.title, t.title), similarity(`${draft.title} ${draft.description}`, `${t.title} ${t.description}`));
+    const score = Math.max(
+      similarity(draft.title, t.title),
+      similarity(`${draft.title} ${draft.description}`, `${t.title} ${t.description}`),
+    );
     if (score < threshold) continue;
     if (OPEN_STATUSES.includes(t.status)) {
       if (!open || score > open.similarity) open = { ticket: t, similarity: score };

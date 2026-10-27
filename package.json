@@ -2,7 +2,9 @@
   "name": "nexo-assist",
   "private": true,
   "packageManager": "pnpm@10.33.4",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "pnpm --parallel --filter @nexo/tickets --filter @nexo/web dev",
     "build": "pnpm -r build",
@@ -10,6 +12,11 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
-    "seed": "pnpm --filter @nexo/tickets seed && pnpm --filter @nexo/web seed"
+    "seed": "pnpm --filter @nexo/tickets seed && pnpm --filter @nexo/web seed",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10"
   }
 }

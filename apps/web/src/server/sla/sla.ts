@@ -23,7 +23,9 @@ export const SLA_TEXT: Record<Priority, string> = {
 };
 
 function dueLabel(due: Date, now: Date): string {
-  return isSameLocalDay(due, now) ? `resposta até ${formatLocalTime(due)}` : `resposta até ${formatLocalDate(due)}, ${formatLocalTime(due)}`;
+  return isSameLocalDay(due, now)
+    ? `resposta até ${formatLocalTime(due)}`
+    : `resposta até ${formatLocalDate(due)}, ${formatLocalTime(due)}`;
 }
 
 /**

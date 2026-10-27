@@ -131,10 +131,7 @@ export class ConversationRepository {
   }
 
   listAll(): StoredConversation[] {
-    return this.db
-      .prepare<[], ConversationRow>("SELECT * FROM conversations ORDER BY updated_at DESC LIMIT 200")
-      .all()
-      .map(toConversation);
+    return this.db.prepare<[], ConversationRow>("SELECT * FROM conversations ORDER BY updated_at DESC LIMIT 200").all().map(toConversation);
   }
 
   update(

@@ -45,7 +45,13 @@ export function createAgentTools(ctx: TurnContext, userText: string) {
       execute: async ({ consulta }) => {
         const hits = await searchKnowledgeBase(ctx, consulta);
         return {
-          artigos: hits.map((h) => ({ id: h.article.id, titulo: h.article.title, conteudo: h.article.body, limitacoes: h.article.limits, relevancia: Math.round(h.score * 100) / 100 })),
+          artigos: hits.map((h) => ({
+            id: h.article.id,
+            titulo: h.article.title,
+            conteudo: h.article.body,
+            limitacoes: h.article.limits,
+            relevancia: Math.round(h.score * 100) / 100,
+          })),
         };
       },
     }),
@@ -98,13 +104,21 @@ export function createAgentTools(ctx: TurnContext, userText: string) {
 
     oferecer_opcoes: createTool({
       id: "oferecer_opcoes",
-      description: "Mostra botões de resposta rápida abaixo da sua mensagem (2 a 5 opções curtas). Use para perguntas fechadas, como quem é afetado.",
+      description:
+        "Mostra botões de resposta rápida abaixo da sua mensagem (2 a 5 opções curtas). Use para perguntas fechadas, como quem é afetado.",
       inputSchema: z.object({
         pergunta: z.string().nullable().describe("pergunta em negrito acima dos botões, ex.: 'Quem está sendo afetado?'"),
-        opcoes: z.array(z.object({ rotulo: z.string().max(40), valor: z.string().max(60) })).min(2).max(5),
+        opcoes: z
+          .array(z.object({ rotulo: z.string().max(40), valor: z.string().max(60) }))
+          .min(2)
+          .max(5),
       }),
       execute: async ({ pergunta, opcoes }) => {
-        offerOptions(ctx, pergunta, opcoes.map((o) => ({ label: o.rotulo, value: o.valor })));
+        offerOptions(
+          ctx,
+          pergunta,
+          opcoes.map((o) => ({ label: o.rotulo, value: o.valor })),
+        );
         return { ok: true };
       },
     }),
@@ -115,7 +129,11 @@ export function createAgentTools(ctx: TurnContext, userText: string) {
         "Monta o rascunho de um chamado para o funcionário conferir (NÃO cria). modo: create (novo), update (complementar chamado aberto), reopen (reabrir resolvido há até 7 dias). A prioridade é calculada pelo sistema a partir dos sinais.",
       inputSchema: z.object({
         modo: z.enum(["create", "update", "reopen"]),
-        chamadoAlvo: z.string().regex(/^(INC|REQ)-\d{5}$/i).nullable().describe("obrigatório em update/reopen"),
+        chamadoAlvo: z
+          .string()
+          .regex(/^(INC|REQ)-\d{5}$/i)
+          .nullable()
+          .describe("obrigatório em update/reopen"),
         tipo: TicketType.describe("INC = algo parou/não funciona; REQ = pedido de acesso/equipamento/software"),
         titulo: z.string().min(5).max(90).describe("curto e específico, ex.: 'VPN não conecta no notebook — erro 809'"),
         descricao: z.string().min(10).max(800).describe("o que acontece, desde quando, o que já tentou, ambiente (SO etc.) e impacto"),
@@ -139,7 +157,11 @@ export function createAgentTools(ctx: TurnContext, userText: string) {
             category: i.categoria,
             subcategory: i.subcategoria,
             affected: i.afetados,
-            signals: { blocksWork: i.sinais.impedeTrabalho, sameDayCommitment: i.sinais.compromissoHoje, hasWorkaround: i.sinais.temAlternativa },
+            signals: {
+              blocksWork: i.sinais.impedeTrabalho,
+              sameDayCommitment: i.sinais.compromissoHoje,
+              hasWorkaround: i.sinais.temAlternativa,
+            },
           });
           return {
             rascunho: draft.id,
@@ -162,24 +184,41 @@ export function createAgentTools(ctx: TurnContext, userText: string) {
           // Guardrail de código: sem confirmação explícita na mensagem atual, não grava.
           if (!isExplicitConfirmation(userText)) {
             ctx.recorder.guardrails.add("Tentativa de gravar sem confirmação explícita bloqueada");
-            return { ok: false as const, erro: "O funcionário ainda não confirmou explicitamente. Peça para conferir e confirmar o rascunho." };
+            return {
+              ok: false as const,
+              erro: "O funcionário ainda não confirmou explicitamente. Peça para conferir e confirmar o rascunho.",
+            };
           }
           const { ticket, draft } = await confirmDraft(ctx, rascunho);
-          return { ok: true as const, chamado: ticket.id, modo: draft.mode, prioridade: PRIORITY_LABEL[ticket.priority], prazo: ticket.sla.label };
+          return {
+            ok: true as const,
+            chamado: ticket.id,
+            modo: draft.mode,
+            prioridade: PRIORITY_LABEL[ticket.priority],
+            prazo: ticket.sla.label,
+          };
         }),
     }),
 
     transferir_para_analista: createTool({
       id: "transferir_para_analista",
-      description: "Transfere a conversa para um analista humano (o agent fica pausado). Use quando o funcionário pedir, em caso crítico, chamado vencido ou quando você não tiver segurança.",
+      description:
+        "Transfere a conversa para um analista humano (o agent fica pausado). Use quando o funcionário pedir, em caso crítico, chamado vencido ou quando você não tiver segurança.",
       inputSchema: z.object({
         motivo: z.enum(["pedido_do_funcionario", "caso_critico", "chamado_vencido", "baixa_confianca"]),
         resumo: z.string().min(20).max(600).describe("resumo do caso para o analista não precisar perguntar tudo de novo"),
-        chamado: z.string().regex(/^(INC|REQ)-\d{5}$/i).nullable(),
+        chamado: z
+          .string()
+          .regex(/^(INC|REQ)-\d{5}$/i)
+          .nullable(),
       }),
       execute: async ({ motivo, resumo, chamado }) => {
         const req = requestHandoff(ctx, motivo, resumo, chamado?.toUpperCase() ?? null, motivo === "caso_critico");
-        return { ok: true, equipe: `Suporte ${req.team}`, observacao: "A transferência é aplicada ao final desta resposta. Avise o funcionário que um analista vai falar com ele." };
+        return {
+          ok: true,
+          equipe: `Suporte ${req.team}`,
+          observacao: "A transferência é aplicada ao final desta resposta. Avise o funcionário que um analista vai falar com ele.",
+        };
       },
     }),
   };

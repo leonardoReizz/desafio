@@ -52,7 +52,10 @@ export function listConversations(deps: Deps, analyst: Analyst, filter: Conversa
     const msgs = deps.conversations.recentMessages(c.id, 30);
     const last = [...msgs].reverse().find((m) => m.role !== "system") ?? null;
     if (q && !`${employee.name} ${c.relatedTicketId ?? ""} ${last?.text ?? ""}`.toLowerCase().includes(q)) continue;
-    const unread = c.status === "waiting_human" || c.status === "human" ? msgs.filter((m) => m.role === "user" && (!c.analystReadAt || m.createdAt > c.analystReadAt)).length : 0;
+    const unread =
+      c.status === "waiting_human" || c.status === "human"
+        ? msgs.filter((m) => m.role === "user" && (!c.analystReadAt || m.createdAt > c.analystReadAt)).length
+        : 0;
     items.push({
       id: c.id,
       employee: { id: employee.id, name: employee.name, department: employee.department },
@@ -77,7 +80,10 @@ export function listConversations(deps: Deps, analyst: Analyst, filter: Conversa
   return { items, counts };
 }
 
-export async function conversationDetail(deps: Deps, conversationId: string): Promise<ConversationDetail & { ticketsUnavailable: boolean }> {
+export async function conversationDetail(
+  deps: Deps,
+  conversationId: string,
+): Promise<ConversationDetail & { ticketsUnavailable: boolean }> {
   const conversation = deps.conversations.get(conversationId);
   if (!conversation) throw new NotFound("Conversa não encontrada");
   const employee = deps.users.getEmployee(conversation.employeeId);

@@ -30,7 +30,13 @@ describe("findDuplicate", () => {
   });
 
   it("sugere reabrir resolvido há até 7 dias", () => {
-    const t = { ...base, id: "INC-20150", title: "Senha do SAP bloqueada", status: "resolvido" as const, resolvedAt: "2026-10-17T13:00:00.000Z" };
+    const t = {
+      ...base,
+      id: "INC-20150",
+      title: "Senha do SAP bloqueada",
+      status: "resolvido" as const,
+      resolvedAt: "2026-10-17T13:00:00.000Z",
+    };
     const m = findDuplicate([t], { category: "acesso", title: "SAP bloqueado de novo", description: "senha bloqueou" }, now);
     expect(m.kind).toBe("reopenable");
   });
@@ -47,7 +53,13 @@ describe("findDuplicate", () => {
 
   it("prefere o aberto ao reabrível", () => {
     const open = { ...base, id: "INC-A", title: "SAP sem acesso" };
-    const resolved = { ...base, id: "INC-B", title: "SAP sem acesso bloqueado", status: "resolvido" as const, resolvedAt: "2026-10-20T13:00:00.000Z" };
+    const resolved = {
+      ...base,
+      id: "INC-B",
+      title: "SAP sem acesso bloqueado",
+      status: "resolvido" as const,
+      resolvedAt: "2026-10-20T13:00:00.000Z",
+    };
     const m = findDuplicate([resolved, open], { category: "acesso", title: "SAP sem acesso bloqueado", description: "" }, now);
     expect(m.kind === "open" && m.ticket.id).toBe("INC-A");
   });
