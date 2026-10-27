@@ -42,6 +42,29 @@ transferência, console) e responde com transparência quando a mensagem precisa
 4. Em qualquer resposta do agent, clique em **Ver por quê** para ver o que ele entendeu, a ação, a confiança,
    as regras aplicadas, cada ferramenta (duração, tentativas, falhas) e os guardrails.
 
+## Deploy (CapRover)
+
+CI/CD no GitHub Actions: a cada push na `main`, o workflow **Deploy** roda o CI (formatação, tipos, lint e
+testes), monta a imagem Docker, publica no GHCR e manda o CapRover puxar a imagem pronta — nada é compilado
+no servidor. Pull requests e outros branches rodam só o **CI**.
+
+A imagem ([Dockerfile](Dockerfile)) sobe os dois processos num container ([docker/start.mjs](docker/start.mjs)):
+o app web na porta 3000 e o serviço de chamados em `127.0.0.1:4001`, acessível só de dentro do container. Se
+um dos dois cair, o container reinicia.
+
+Configuração no CapRover (app `desafio`):
+
+1. **Container HTTP Port**: `3000`; HTTPS habilitado.
+2. **Persistent directory**: `/data` (bancos SQLite de conversas e chamados — sobrevivem a deploys).
+3. **Variáveis de ambiente**: `TICKETS_SERVICE_TOKEN` (`openssl rand -hex 32`), `FAL_KEY`, `LLM_PROVIDER=fal` e
+   `DEMO_DAILY_LLM_BUDGET` (ex.: `300`, protege o crédito num link público). Caminhos de banco e portas
+   internas já vêm da imagem — não defina `APP_DB_PATH`, `TICKETS_DB_PATH` nem `TICKETS_SERVICE_URL`.
+4. Se o pacote no GHCR for privado, cadastre o registry `ghcr.io` no CapRover (usuário do GitHub + token
+   com `read:packages`).
+
+Secrets do repositório no GitHub: `CAPROVER_SERVER` (URL do painel), `CAPROVER_APP` (`desafio`) e
+`CAPROVER_APP_TOKEN` (aba _Deployment_ do app no CapRover → _App Token_).
+
 ## Arquitetura
 
 ```
@@ -169,4 +192,5 @@ Uso consciente do modelo:
 - Console em tempo real (SSE), atribuição por fila N1/N2 e métricas (resolução sem fila, tempo até analista).
 - Postgres + migrations versionadas; observabilidade (traces OpenTelemetry por turno).
 - Busca semântica na central de ajuda e sugestão de novos artigos a partir de chamados recorrentes.
-- Deploy público com os dois serviços (ex.: Railway/Fly.io) usando o orçamento diário de LLM já implementado.
+- Separar web e serviço de chamados em apps distintos no deploy (hoje dividem um container) e trocar SQLite
+  por Postgres para escalar horizontalmente.
