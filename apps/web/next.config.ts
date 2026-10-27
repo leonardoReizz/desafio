@@ -14,6 +14,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Imagem Docker: servidor mínimo em .next/standalone (o monorepo inteiro é a raiz do tracing).
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
+  outputFileTracingRoot: resolve(process.cwd(), "../.."),
   cacheComponents: true,
   partialPrefetching: true,
   // Módulos nativos / pesados ficam fora do bundle do servidor.

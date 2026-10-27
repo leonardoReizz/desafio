@@ -20,6 +20,6 @@ const app = createApp({
   latencyMs: env.TICKETS_LATENCY_MS,
 });
 
-serve({ fetch: app.fetch, port: env.TICKETS_PORT }, (info) => {
-  console.log(`[tickets] ouvindo em http://localhost:${info.port} (falha simulada ${env.TICKETS_FAILURE_RATE * 100}%)`);
+serve({ fetch: app.fetch, port: env.TICKETS_PORT, hostname: env.TICKETS_HOST }, (info) => {
+  console.log(`[tickets] ouvindo em http://${env.TICKETS_HOST}:${info.port} (falha simulada ${env.TICKETS_FAILURE_RATE * 100}%)`);
 });

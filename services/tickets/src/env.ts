@@ -2,6 +2,8 @@ import { z } from "zod";
 
 const Env = z.object({
   TICKETS_PORT: z.coerce.number().int().positive().default(4001),
+  /** No container fica em 127.0.0.1: só o app web (mesmo container) alcança o serviço. */
+  TICKETS_HOST: z.string().default("0.0.0.0"),
   TICKETS_DB_PATH: z.string().default("./data/tickets.db"),
   TICKETS_SERVICE_TOKEN: z.string().min(16, "TICKETS_SERVICE_TOKEN precisa ter ao menos 16 caracteres"),
   TICKETS_FAILURE_RATE: z.coerce.number().min(0).max(1).default(0.15),
