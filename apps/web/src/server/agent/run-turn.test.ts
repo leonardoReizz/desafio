@@ -189,6 +189,10 @@ describe("runEmployeeTurn", () => {
     const updated = s.conversations.getMessage(draftMsg.id)!;
     const card = updated.blocks.find((b) => b.kind === "draft");
     expect(card?.kind === "draft" && card.draft.status).toBe("confirmed");
+    // O chamado novo fica pendente na conversa (fila do console) mesmo que ela siga com o agent.
+    const conv = s.conversations.get(updated.conversationId)!;
+    expect(conv.status).toBe("agent");
+    expect(conv.pendingTicket).toEqual({ id: card?.kind === "draft" ? card.draft.resultTicketId : null, action: "create" });
   });
 
   it("converte criação duplicada em atualização do chamado aberto", async () => {

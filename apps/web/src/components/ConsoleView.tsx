@@ -42,6 +42,7 @@ const filterLabels: { id: ConversationListFilter; label: string }[] = [
 function minutesSince(iso: string): number {
   return Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000));
 }
+const PENDING_ACTION_LABEL = { create: "Chamado aberto", update: "Chamado atualizado", reopen: "Chamado reaberto" } as const;
 function listStatus(item: ConversationListItem, analystId: string) {
   if (item.status === "waiting_human" && item.handoffReason === "baixa_confianca")
     return { text: `Agent pediu ajuda · confiança ${Math.round((item.lastConfidence ?? 0) * 100)}%`, tone: "amber" };
@@ -49,6 +50,8 @@ function listStatus(item: ConversationListItem, analystId: string) {
     const waiting = item.waitingSince ? `aguarda há ${minutesSince(item.waitingSince)} min` : "aguardando";
     return { text: item.relatedTicketId ? `Transferida · ${item.relatedTicketId}` : `Transferida · ${waiting}`, tone: "red" };
   }
+  if (item.status === "agent" && item.pendingTicket)
+    return { text: `${PENDING_ACTION_LABEL[item.pendingTicket.action]} pelo agent · ${item.pendingTicket.id}`, tone: "amber" };
   if (item.status === "human")
     return item.assignedAnalystId === analystId
       ? { text: "Você está atendendo", tone: "blue" }
@@ -146,7 +149,9 @@ export function ConsoleView({
   const [showAllTickets, setShowAllTickets] = useState(false);
   const [openTicketId, setOpenTicketId] = useState<string | null>(null);
   const toggleTicket = (id: string) => setOpenTicketId((cur) => (cur === id ? null : id));
-  const related = detail?.tickets.find((t) => t.id === detail.conversation.relatedTicketId) ?? null;
+  // "Desta conversa": o chamado que o agent abriu aqui tem precedência sobre o último consultado.
+  const relatedId = detail?.conversation.pendingTicket?.id ?? detail?.conversation.relatedTicketId ?? null;
+  const related = detail?.tickets.find((t) => t.id === relatedId) ?? null;
   const others = (detail?.tickets ?? []).filter(
     (t) => t.id !== related?.id && (showAllTickets || !CLOSED_STATUSES.has(t.status) || t.resolvedAt),
   );
@@ -455,8 +460,16 @@ export function ConsoleView({
                   <div className="takeover-copy">
                     <span>🤖</span>
                     <div>
-                      <strong>O Nexo Assist está atendendo {firstName}</strong>
-                      <small>Você pode entrar na conversa; o agent fica pausado</small>
+                      <strong>
+                        {detail.conversation.pendingTicket
+                          ? `${PENDING_ACTION_LABEL[detail.conversation.pendingTicket.action]} pelo agent: ${detail.conversation.pendingTicket.id}`
+                          : `O Nexo Assist está atendendo ${firstName}`}
+                      </strong>
+                      <small>
+                        {detail.conversation.pendingTicket
+                          ? "Trate o chamado no painel ao lado ou assuma a conversa; o agent segue atendendo até lá"
+                          : "Você pode entrar na conversa; o agent fica pausado"}
+                      </small>
                     </div>
                   </div>
                   <button type="button" className="button-primary" onClick={onAssume} disabled={busy}>

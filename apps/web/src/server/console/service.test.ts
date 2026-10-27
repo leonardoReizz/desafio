@@ -7,7 +7,7 @@ import { openAppDatabase } from "../db/client";
 import { ConversationRepository } from "../db/conversations";
 import { UserRepository } from "../db/users";
 import { TicketsClient, TicketServiceError } from "../tickets-client/client";
-import { assume, updateTicket } from "./service";
+import { assume, listConversations, updateTicket } from "./service";
 
 const NOW = new Date("2026-10-21T13:05:00.000Z");
 const rafael = { ...DEMO_ANALYSTS[0]! };
@@ -47,5 +47,21 @@ describe("console do analista", () => {
     await expect(updateTicket(deps, rafael, conv.id, "INC-20322", { status: "resolvido", note: null })).rejects.toBeInstanceOf(
       TicketServiceError,
     );
+  });
+
+  it("chamado aberto pelo agent entra em 'Para você' até um analista tratar", async () => {
+    const { deps, conv } = setup();
+    deps.conversations.update(conv.id, { relatedTicketId: "INC-20311", pendingTicketId: "INC-20311", pendingTicketAction: "create" });
+    const queue = () => listConversations(deps, rafael, "para_voce", "").items.map((i) => i.id);
+    expect(queue()).toContain(conv.id);
+    await updateTicket(deps, rafael, conv.id, "INC-20311", { status: "em_andamento", note: null });
+    expect(queue()).not.toContain(conv.id);
+  });
+
+  it("assumir a conversa também tira o chamado pendente da fila", () => {
+    const { deps, conv } = setup();
+    deps.conversations.update(conv.id, { pendingTicketId: "INC-20311", pendingTicketAction: "create" });
+    assume(deps, rafael, conv.id);
+    expect(deps.conversations.get(conv.id)!.pendingTicket).toBeNull();
   });
 });

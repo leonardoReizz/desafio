@@ -177,6 +177,10 @@ export const ChatMessage = z.object({
 });
 export type ChatMessage = z.infer<typeof ChatMessage>;
 
+/** Chamado aberto/atualizado/reaberto pelo agent nesta conversa e ainda não tratado por um analista. */
+export const PendingTicket = z.object({ id: z.string(), action: z.enum(["create", "update", "reopen"]) });
+export type PendingTicket = z.infer<typeof PendingTicket>;
+
 export const Conversation = z.object({
   id: z.string(),
   employeeId: z.string(),
@@ -188,6 +192,7 @@ export const Conversation = z.object({
   /** Confiança da última decisão do agent (para "Agent pediu ajuda · confiança 41%"). */
   lastConfidence: z.number().min(0).max(1).nullable(),
   userMessageCount: z.number().int().nonnegative(),
+  pendingTicket: PendingTicket.nullable(),
   /** Até quando cada lado leu a conversa (confirmação de leitura ✓✓). */
   employeeReadAt: z.iso.datetime().nullable(),
   analystReadAt: z.iso.datetime().nullable(),
@@ -236,6 +241,7 @@ export const ConversationListItem = z.object({
   status: ConversationStatus,
   handoffReason: HandoffReason.nullable(),
   relatedTicketId: z.string().nullable(),
+  pendingTicket: PendingTicket.nullable(),
   lastConfidence: z.number().nullable(),
   lastMessage: z.object({ role: MessageRole, text: z.string(), at: z.iso.datetime() }).nullable(),
   unreadCount: z.number().int().nonnegative(),

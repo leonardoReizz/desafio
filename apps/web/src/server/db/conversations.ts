@@ -26,6 +26,8 @@ interface ConversationRow {
   user_message_count: number;
   analyst_read_at: string | null;
   employee_read_at: string | null;
+  pending_ticket_id: string | null;
+  pending_ticket_action: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -71,6 +73,7 @@ function toConversation(r: ConversationRow): StoredConversation {
       lastConfidence: r.last_confidence,
       userMessageCount: r.user_message_count,
       employeeReadAt: r.employee_read_at,
+      pendingTicket: r.pending_ticket_id ? { id: r.pending_ticket_id, action: r.pending_ticket_action ?? "create" } : null,
       analystReadAt: r.analyst_read_at,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
@@ -145,6 +148,8 @@ export class ConversationRepository {
       assignedAnalystId: string | null;
       relatedTicketId: string | null;
       lastConfidence: number | null;
+      pendingTicketId: string | null;
+      pendingTicketAction: "create" | "update" | "reopen" | null;
     }>,
   ): void {
     const cols: Record<string, string> = {
@@ -155,6 +160,8 @@ export class ConversationRepository {
       assignedAnalystId: "assigned_analyst_id",
       relatedTicketId: "related_ticket_id",
       lastConfidence: "last_confidence",
+      pendingTicketId: "pending_ticket_id",
+      pendingTicketAction: "pending_ticket_action",
     };
     const entries = Object.entries(patch).filter(([k]) => k in cols);
     if (entries.length === 0) return;

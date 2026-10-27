@@ -20,6 +20,7 @@ function blankConversation(employeeId: string): Conversation {
     relatedTicketId: null,
     lastConfidence: null,
     userMessageCount: 0,
+    pendingTicket: null,
     employeeReadAt: null,
     analystReadAt: null,
     createdAt: now,

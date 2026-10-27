@@ -27,7 +27,8 @@ function matchesFilter(c: StoredConversation, filter: ConversationListFilter, an
     case "todas":
       return true;
     case "para_voce":
-      return c.status === "waiting_human";
+      // Transferidas + conversas em que o agent abriu/alterou um chamado que ninguém tratou ainda.
+      return c.status === "waiting_human" || (c.status === "agent" && c.pendingTicket !== null);
     case "com_agent":
       return c.status === "agent";
     case "minhas":
@@ -37,7 +38,8 @@ function matchesFilter(c: StoredConversation, filter: ConversationListFilter, an
 
 /** Ordem do console: quem espera analista primeiro (mais antigo no topo), depois o resto por atividade. */
 function priorityOrder(c: StoredConversation): number {
-  return c.status === "waiting_human" ? 0 : c.status === "human" ? 1 : c.status === "agent" ? 2 : 3;
+  if (c.status === "waiting_human" || (c.status === "agent" && c.pendingTicket)) return 0;
+  return c.status === "human" ? 1 : c.status === "agent" ? 2 : 3;
 }
 
 export function listConversations(deps: Deps, analyst: Analyst, filter: ConversationListFilter, query: string): ConsoleList {
@@ -64,6 +66,7 @@ export function listConversations(deps: Deps, analyst: Analyst, filter: Conversa
       status: c.status,
       handoffReason: c.handoffReason,
       relatedTicketId: c.relatedTicketId,
+      pendingTicket: c.pendingTicket,
       lastConfidence: c.lastConfidence,
       lastMessage: last ? { role: last.role, text: last.text, at: last.createdAt } : null,
       unreadCount: unread,
@@ -121,7 +124,12 @@ export function assume(deps: Deps, analyst: Analyst, conversationId: string): vo
   const c = deps.conversations.get(conversationId);
   if (!c) throw new NotFound("Conversa não encontrada");
   const from = c.status;
-  deps.conversations.update(c.id, { status: transition(c.status, "assume"), assignedAnalystId: analyst.id });
+  deps.conversations.update(c.id, {
+    status: transition(c.status, "assume"),
+    assignedAnalystId: analyst.id,
+    pendingTicketId: null,
+    pendingTicketAction: null,
+  });
   systemNote(
     deps,
     c.id,
@@ -171,6 +179,7 @@ export async function updateTicket(
     { author: "analista", authorName: analyst.name, text, reopen: false, ...(input.status ? { status: input.status } : {}) },
     `console-${randomUUID()}`,
   );
+  if (c.pendingTicket?.id === ticketId) deps.conversations.update(c.id, { pendingTicketId: null, pendingTicketAction: null });
   // O funcionário vê no chat o que mudou no chamado.
   const what = input.status ? `marcou o ${ticketId} como ${STATUS_LABEL[input.status].toLowerCase()}` : `registrou uma nota no ${ticketId}`;
   systemNote(deps, c.id, `${analyst.name} ${what}`);

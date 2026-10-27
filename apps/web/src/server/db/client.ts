@@ -34,6 +34,8 @@ const MIGRATION = `
     user_message_count INTEGER NOT NULL DEFAULT 0,
     analyst_read_at TEXT,
     employee_read_at TEXT,
+    pending_ticket_id TEXT,
+    pending_ticket_action TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
@@ -86,7 +88,19 @@ export function openAppDatabase(path: string): Database.Database {
   db.exec(MIGRATION);
   // Bancos criados antes da confirmação de leitura do funcionário.
   const cols = db.prepare<[], { name: string }>("PRAGMA table_info(conversations)").all();
-  if (!cols.some((c) => c.name === "employee_read_at")) db.exec("ALTER TABLE conversations ADD COLUMN employee_read_at TEXT");
+  for (const col of ["employee_read_at", "pending_ticket_id", "pending_ticket_action"]) {
+    if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE conversations ADD COLUMN ${col} TEXT`);
+  }
+  if (!cols.some((c) => c.name === "pending_ticket_id")) {
+    // Bancos antigos: o último chamado confirmado em conversas ainda com o agent entra na fila do console.
+    db.exec(`
+      UPDATE conversations SET
+        pending_ticket_id = (SELECT json_extract(d.data_json, '$.resultTicketId') FROM drafts d
+          WHERE d.conversation_id = conversations.id AND d.status = 'confirmed' ORDER BY d.updated_at DESC LIMIT 1),
+        pending_ticket_action = (SELECT json_extract(d.data_json, '$.mode') FROM drafts d
+          WHERE d.conversation_id = conversations.id AND d.status = 'confirmed' ORDER BY d.updated_at DESC LIMIT 1)
+      WHERE status = 'agent'`);
+  }
   seedUsers(db);
   return db;
 }

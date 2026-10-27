@@ -267,7 +267,12 @@ export async function confirmDraft(ctx: TurnContext, draftId: string): Promise<{
   const confirmed: TicketDraft = { ...draft, status: "confirmed", resultTicketId: ticket.id };
   ctx.deps.conversations.saveDraft(ctx.conversation.id, ctx.employee.id, confirmed);
   refreshDraftCard(ctx, confirmed);
-  ctx.deps.conversations.update(ctx.conversation.id, { relatedTicketId: ticket.id });
+  // O chamado entra na fila do console até um analista tratá-lo (assumir a conversa ou mexer no chamado).
+  ctx.deps.conversations.update(ctx.conversation.id, {
+    relatedTicketId: ticket.id,
+    pendingTicketId: ticket.id,
+    pendingTicketAction: draft.mode,
+  });
   ctx.recorder.focusTicketId = ticket.id;
   ctx.recorder.guardrails.add("Confirmação explícita do funcionário verificada antes de gravar");
   return { draft: confirmed, ticket: toTicketView(ticket, now) };
