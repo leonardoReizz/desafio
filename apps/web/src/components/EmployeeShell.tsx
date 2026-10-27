@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { ChevronRight, LogOut, MessageSquare, UserRound } from "lucide-react";
+import { ChevronRight, MessageSquare, UserRound } from "lucide-react";
 import type { Employee } from "@nexo/contracts";
+import { avatarTone, initials } from "@/lib/format";
 import { Brand } from "./Brand";
+import { LogoutButton } from "./LogoutButton";
 
 export function EmployeeShell({
   employee,
@@ -32,16 +34,13 @@ export function EmployeeShell({
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-user">
-            <span className="avatar avatar-ana">AS</span>
+            <span className={`avatar ${avatarTone(employee.id)}`}>{initials(employee.name)}</span>
             <span>
               <strong>{employee.name}</strong>
               <small>{employee.email}</small>
             </span>
           </div>
-          <Link className="sidebar-link logout" href="/login">
-            <LogOut size={18} />
-            Sair
-          </Link>
+          <LogoutButton />
         </div>
       </aside>
       <div className="employee-main">

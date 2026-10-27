@@ -1,5 +1,7 @@
 "use client";
+import { useState } from "react";
 import { ArrowRight, Clock3 } from "lucide-react";
+import { formatDateTime, formatDayMonth, formatRelativeDay } from "@/lib/format";
 import {
   AFFECTED_LABEL,
   CATEGORY_LABEL,
@@ -50,7 +52,7 @@ function DraftCard({
           {draft.status === "pending"
             ? "● Aguardando confirmação"
             : draft.status === "confirmed"
-              ? `✓ Chamado ${draft.resultTicketId ?? "INC-20517"} criado`
+              ? `✓ ${draft.resultTicketId ?? "Chamado"} ${draft.mode === "create" ? "criado" : draft.mode === "update" ? "atualizado" : "reaberto"}`
               : "Rascunho cancelado"}
         </span>
       </div>
@@ -126,23 +128,29 @@ function DraftCard({
   );
 }
 function TicketSelect({ tickets, onSelect }: { tickets: TicketSummary[]; onSelect: (id: string, label: string) => void }) {
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   return (
     <div className="ticket-select" role="group" aria-label="Selecione um chamado">
-      {tickets.map((ticket, index) => (
+      {tickets.map((ticket) => (
         <button
           type="button"
           key={ticket.id}
           className="ticket-option"
-          onClick={() => onSelect(ticket.id, `${ticket.id} · ${ticket.title}`)}
+          aria-pressed={ticket.id === selectedTicketId}
+          disabled={selectedTicketId !== null}
+          onClick={() => {
+            setSelectedTicketId(ticket.id);
+            onSelect(ticket.id, `${ticket.id} · ${ticket.title}`);
+          }}
         >
-          <span className={`fake-radio ${index === 0 ? "selected" : ""}`} />
+          <span className={`fake-radio ${ticket.id === selectedTicketId ? "selected" : ""}`} />
           <span className="ticket-id">{ticket.id}</span>
-          <strong>{ticket.title.replace(" do Windows", "")}</strong>
+          <strong>{ticket.title}</strong>
           <span className="option-status">
             <StatusDot status={ticket.status} />
             {STATUS_LABEL[ticket.status]}
           </span>
-          <time>{new Date(ticket.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", "")}</time>
+          <time>{formatDayMonth(ticket.createdAt)}</time>
         </button>
       ))}
     </div>
@@ -179,14 +187,12 @@ function TicketCard({ ticket }: { ticket: TicketView }) {
         </div>
         <div>
           <small>Aberto em</small>
-          <strong>
-            {new Date(ticket.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", "")}, 14:20
-          </strong>
+          <strong>{formatDateTime(ticket.createdAt)}</strong>
         </div>
         <div>
           <small>Última atualização</small>
           <strong className={ticket.sla.overdue ? "overdue" : ""}>
-            {ticket.sla.overdue ? "há 5 dias" : "recente"} <em>· {ticket.sla.label}</em>
+            {formatRelativeDay(ticket.lastServiceUpdateAt ?? ticket.updatedAt)} <em>· {ticket.sla.label}</em>
           </strong>
         </div>
       </div>

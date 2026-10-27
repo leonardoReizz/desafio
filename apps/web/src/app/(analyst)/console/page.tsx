@@ -1,13 +1,19 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { ConsoleContainer } from "@/components/ConsoleContainer";
-async function ConsoleState({ searchParams }: { searchParams: Promise<{ state?: string }> }) {
-  const { state } = await searchParams;
-  return <ConsoleContainer initialAssumed={state === "assumido"} />;
+import { currentUser } from "@/server/auth/session";
+
+async function ConsoleGate() {
+  const user = await currentUser();
+  if (!user) redirect("/login");
+  if (user.role !== "analyst") redirect("/chat");
+  return <ConsoleContainer analyst={user.analyst} />;
 }
-export default function ConsolePage({ searchParams }: { searchParams: Promise<{ state?: string }> }) {
+
+export default function ConsolePage() {
   return (
     <Suspense fallback={<div role="status">Carregando conversas…</div>}>
-      <ConsoleState searchParams={searchParams} />
+      <ConsoleGate />
     </Suspense>
   );
 }

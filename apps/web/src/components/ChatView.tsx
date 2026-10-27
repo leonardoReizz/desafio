@@ -52,6 +52,8 @@ export function ChatView({
   const [text, setText] = useState("");
   const viewport = useRef<HTMLDivElement>(null);
   const limitReached = conversation.userMessageCount >= MAX_USER_MESSAGES_PER_SESSION;
+  const lastAnalyst = [...messages].reverse().find((m) => m.role === "analyst");
+  const analyst = lastAnalyst?.authorName ? { name: lastAnalyst.authorName, badge: lastAnalyst.authorBadge } : null;
   useEffect(() => {
     if (messages.length > 5) viewport.current?.scrollTo({ top: viewport.current.scrollHeight, behavior: "smooth" });
   }, [messages.length]);
@@ -89,7 +91,13 @@ export function ChatView({
             )}
             {conversation.status !== "agent" && (
               <div className="human-banner">
-                {conversation.status === "human" ? "Você está falando com Rafael Lima (Suporte N2)" : "Aguardando um analista…"}
+                {conversation.status === "human"
+                  ? analyst
+                    ? `Você está falando com ${analyst.name}${analyst.badge ? ` (${analyst.badge})` : ""}`
+                    : "Você está falando com um analista"
+                  : conversation.status === "closed"
+                    ? "Atendimento encerrado. Envie uma mensagem para começar uma nova conversa."
+                    : "Aguardando um analista… O Nexo Assist fica pausado enquanto isso."}
               </div>
             )}
             {messages.map((message) => {

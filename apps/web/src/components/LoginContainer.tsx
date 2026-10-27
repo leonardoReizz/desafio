@@ -1,20 +1,29 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { api, ApiRequestError } from "@/lib/api";
 import { LoginView } from "./LoginView";
+
 export function LoginContainer() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  function submit(email: string, password: string) {
-    if (email.toLowerCase() !== "ana.souza@nexo.com.br" && email.toLowerCase() !== "rafael.lima@nexo.com.br") {
-      setError("E-mail não encontrado");
-      return;
-    }
-    if (!password) return;
-    setError(null);
+
+  async function submit(email: string, password: string, remember: boolean) {
+    if (pending) return;
     setPending(true);
-    window.setTimeout(() => router.push(email.toLowerCase().startsWith("rafael") ? "/console" : "/chat"), 350);
+    setError(null);
+    try {
+      const r = await api<{ redirectTo: string }>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password, remember }),
+      });
+      router.replace(r.redirectTo);
+    } catch (e) {
+      setError(e instanceof ApiRequestError ? e.message : "Não foi possível entrar.");
+      setPending(false);
+    }
   }
-  return <LoginView onSubmit={submit} pending={pending} error={error} />;
+
+  return <LoginView onSubmit={(e, p, r) => void submit(e, p, r)} pending={pending} error={error} />;
 }

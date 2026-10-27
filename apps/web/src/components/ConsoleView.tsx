@@ -24,57 +24,57 @@ import {
   type ConversationListItem,
   type TicketView,
 } from "@nexo/contracts";
+import { avatarTone, formatClock, formatDayMarker, formatDayMonth, formatListTime, initials } from "@/lib/format";
 import { Brand } from "./Brand";
+import { LogoutButton } from "./LogoutButton";
 import { DecisionTracePanel } from "./DecisionTracePanel";
 
-const filterLabels: { id: ConversationListFilter; label: string; count?: number }[] = [
+const filterLabels: { id: ConversationListFilter; label: string }[] = [
   { id: "todas", label: "Todas" },
-  { id: "para_voce", label: "Para você", count: 3 },
-  { id: "com_agent", label: "Com o agent", count: 9 },
-  { id: "minhas", label: "Minhas", count: 1 },
+  { id: "para_voce", label: "Para você" },
+  { id: "com_agent", label: "Com o agent" },
+  { id: "minhas", label: "Minhas" },
 ];
-const avatarColors: Record<string, string> = {
-  ana: "blue",
-  carla: "peach",
-  bruno: "purple",
-  diego: "mint",
-  elisa: "rose",
-  fabio: "gray",
-  gabriela: "yellow",
-};
-function initials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("");
+function minutesSince(iso: string): number {
+  return Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000));
 }
-function listStatus(item: ConversationListItem, selectedStatus?: string, selectedId?: string | null) {
-  if (item.id === selectedId && selectedStatus === "human") return { text: "Você está atendendo", tone: "blue" };
-  if (item.handoffReason === "baixa_confianca")
+function listStatus(item: ConversationListItem, analystId: string) {
+  if (item.status === "waiting_human" && item.handoffReason === "baixa_confianca")
     return { text: `Agent pediu ajuda · confiança ${Math.round((item.lastConfidence ?? 0) * 100)}%`, tone: "amber" };
-  if (item.status === "waiting_human")
-    return { text: item.relatedTicketId ? `Transferida · ${item.relatedTicketId}` : "Transferida · contato em 25 min", tone: "red" };
-  if (item.status === "human") return { text: "Você está atendendo", tone: "blue" };
-  if (item.status === "closed") return { text: "Resolvida pelo agent", tone: "gray" };
+  if (item.status === "waiting_human") {
+    const waiting = item.waitingSince ? `aguarda há ${minutesSince(item.waitingSince)} min` : "aguardando";
+    return { text: item.relatedTicketId ? `Transferida · ${item.relatedTicketId}` : `Transferida · ${waiting}`, tone: "red" };
+  }
+  if (item.status === "human")
+    return item.assignedAnalystId === analystId
+      ? { text: "Você está atendendo", tone: "blue" }
+      : { text: "Com outro analista", tone: "gray" };
+  if (item.status === "closed") return { text: item.assignedAnalystId ? "Encerrada pelo analista" : "Resolvida pelo agent", tone: "gray" };
   return { text: "Agent atendendo", tone: "green" };
+}
+/** Momento do último evento de sistema que contém o texto (transferência, assumiu…). */
+function systemEventAt(detail: ConversationDetail, needle: string): string | null {
+  return [...detail.messages].reverse().find((m) => m.role === "system" && m.text.includes(needle))?.createdAt ?? null;
 }
 function TicketRow({ ticket }: { ticket: TicketView }) {
   return (
     <button type="button" className="history-ticket">
       <span className={`status-dot status-${ticket.status}`} />
       <span>
-        <strong>{ticket.title.replace(" do Windows", "")}</strong>
+        <strong>{ticket.title}</strong>
         <small>
           {ticket.id} · {STATUS_LABEL[ticket.status]}
+          {ticket.resolvedAt && ` em ${formatDayMonth(ticket.resolvedAt)}`}
         </small>
       </span>
       <ChevronRight size={17} />
     </button>
   );
 }
+const CLOSED_STATUSES = new Set<TicketView["status"]>(["resolvido", "fechado"]);
 export interface ConsoleViewProps {
   items: ConversationListItem[];
+  counts: Record<ConversationListFilter, number>;
   filter: ConversationListFilter;
   onFilterChange: (filter: ConversationListFilter) => void;
   search: string;
@@ -89,10 +89,14 @@ export interface ConsoleViewProps {
   onSendAsAnalyst: (text: string) => void;
   loading: boolean;
   error: string | null;
+  /** Ação em andamento (assumir/devolver/encerrar/enviar): desabilita botões contra duplo clique. */
+  busy?: boolean;
+  ticketsUnavailable?: boolean;
   initialDraft?: string;
 }
 export function ConsoleView({
   items,
+  counts,
   filter,
   onFilterChange,
   search,
@@ -107,6 +111,8 @@ export function ConsoleView({
   onSendAsAnalyst,
   loading,
   error,
+  busy = false,
+  ticketsUnavailable = false,
   initialDraft = "",
 }: ConsoleViewProps) {
   const [draft, setDraft] = useState(initialDraft);
@@ -117,19 +123,20 @@ export function ConsoleView({
       messageViewport.current.scrollTop = messageViewport.current.scrollHeight;
   }, [detail?.conversation.status, detail?.messages.length]);
   const [showTickets, setShowTickets] = useState(true);
-  const filtered = items.filter(
-    (item) =>
-      (filter === "todas" ||
-        filter === "para_voce" ||
-        (filter === "com_agent" && item.status === "agent") ||
-        (filter === "minhas" && item.status === "human") ||
-        (filter === "minhas" && item.id === selectedId && detail?.conversation.status === "human")) &&
-      `${item.employee.name} ${item.relatedTicketId ?? ""} ${item.lastMessage?.text ?? ""}`.toLowerCase().includes(search.toLowerCase()),
-  );
+  // Filtro e busca são aplicados no servidor; aqui só renderizamos.
+  const filtered = items;
   const status = detail?.conversation.status;
-  const assumed = status === "human";
+  const assumed = status === "human" && detail?.conversation.assignedAnalystId === analyst.id;
   const firstName = detail?.employee.name.split(" ")[0] ?? "funcionário";
-  const possessive = ["Ana", "Carla", "Elisa", "Gabriela"].includes(firstName) ? "da" : "do";
+  const [showAllTickets, setShowAllTickets] = useState(false);
+  const related = detail?.tickets.find((t) => t.id === detail.conversation.relatedTicketId) ?? null;
+  const others = (detail?.tickets ?? []).filter(
+    (t) => t.id !== related?.id && (showAllTickets || !CLOSED_STATUSES.has(t.status) || t.resolvedAt),
+  );
+  const transferredAt = detail ? systemEventAt(detail, "Transferida") : null;
+  const assumedAt = detail ? systemEventAt(detail, "assumiu") : null;
+  // Meta de primeira resposta do analista após a transferência: 2 horas.
+  const pausedUntil = transferredAt ? formatClock(new Date(Date.parse(transferredAt) + 2 * 3_600_000).toISOString()) : null;
   function submit() {
     if (!draft.trim() || !assumed) return;
     onSendAsAnalyst(draft.trim());
@@ -141,11 +148,12 @@ export function ConsoleView({
         <Brand compact />
         <button type="button" className="rail-current" aria-label="Conversas">
           <MessageCircle size={22} />
-          <span>5</span>
+          {counts.para_voce > 0 && <span>{counts.para_voce}</span>}
         </button>
         <div className="rail-spacer" />
-        <span className="rail-avatar">
-          RL
+        <LogoutButton compact />
+        <span className="rail-avatar" title={`${analyst.name} · Suporte ${analyst.team}`}>
+          {initials(analyst.name)}
           <i />
         </span>
       </aside>
@@ -176,7 +184,7 @@ export function ConsoleView({
                 onClick={() => onFilterChange(option.id)}
               >
                 {option.label}
-                {option.count && <b>{option.count}</b>}
+                {option.id !== "todas" && counts[option.id] > 0 && <b>{counts[option.id]}</b>}
               </button>
             ))}
           </div>
@@ -203,8 +211,8 @@ export function ConsoleView({
             <div className="console-empty">Nenhuma conversa neste filtro</div>
           ) : (
             filtered.map((item) => {
-              const state = listStatus(item, detail?.conversation.status, selectedId);
-              const preview = item.id === "ana-conversation" && assumed ? "Posso sim, está ligado." : item.lastMessage?.text;
+              const state = listStatus(item, analyst.id);
+              const preview = item.lastMessage ? `${item.lastMessage.role === "agent" ? "Nexo: " : ""}${item.lastMessage.text}` : "";
               return (
                 <button
                   type="button"
@@ -212,14 +220,16 @@ export function ConsoleView({
                   key={item.id}
                   onClick={() => onSelect(item.id)}
                 >
-                  <span className={`list-avatar ${avatarColors[item.employee.id] ?? "blue"}`}>
+                  <span className={`list-avatar ${avatarTone(item.employee.id)}`}>
                     {initials(item.employee.name)}
                     <i />
                   </span>
                   <span className="item-body">
                     <span className="item-name">
                       {item.employee.name}
-                      <time>{item.id === "diego" ? "agora" : item.id === "gabriela" ? "ontem" : item.lastMessage?.at.slice(11, 16)}</time>
+                      <time className={item.unreadCount > 0 ? "unread-time" : ""}>
+                        {item.lastMessage ? formatListTime(item.lastMessage.at) : ""}
+                      </time>
                     </span>
                     <span className="item-preview">{preview}</span>
                     <span className={`item-status ${state.tone}`}>
@@ -227,7 +237,7 @@ export function ConsoleView({
                       {state.text}
                     </span>
                   </span>
-                  {item.unreadCount > 0 && !(item.id === "ana-conversation" && assumed) && <b className="unread">{item.unreadCount}</b>}
+                  {item.unreadCount > 0 && item.id !== selectedId && <b className="unread">{item.unreadCount}</b>}
                 </button>
               );
             })
@@ -248,7 +258,7 @@ export function ConsoleView({
         ) : (
           <>
             <header className="console-chat-header">
-              <span className="avatar avatar-ana">AS</span>
+              <span className={`avatar ${avatarTone(detail.employee.id)}`}>{initials(detail.employee.name)}</span>
               <div className="console-person">
                 <strong>{detail.employee.name}</strong>
                 <small>
@@ -259,19 +269,28 @@ export function ConsoleView({
               <div className="header-actions">
                 {assumed ? (
                   <>
-                    <button type="button" className="button-secondary" onClick={onReturnToAgent}>
+                    <button type="button" className="button-secondary" onClick={onReturnToAgent} disabled={busy}>
                       <Bot size={17} />
                       Devolver ao agent
                     </button>
-                    <button type="button" className="button-danger" onClick={onClose}>
+                    <button type="button" className="button-danger" onClick={onClose} disabled={busy}>
                       <CircleCheck size={17} />
                       Encerrar atendimento
                     </button>
                   </>
-                ) : (
+                ) : status === "waiting_human" ? (
                   <span className="waiting-pill">
                     <Bot size={16} />
                     Aguardando atendente
+                  </span>
+                ) : (
+                  <span className="waiting-pill neutral">
+                    <Bot size={16} />
+                    {status === "agent"
+                      ? "Com o agent"
+                      : status === "closed"
+                        ? "Encerrada"
+                        : `Com ${detail.assignedAnalyst?.name ?? "outro analista"}`}
                   </span>
                 )}
                 <button type="button" className="icon-button" aria-label="Pesquisar na conversa">
@@ -291,7 +310,7 @@ export function ConsoleView({
                     <p>{detail.conversation.handoffSummary}</p>
                   </div>
                 )}
-                <div className="day-marker">Hoje</div>
+                {detail.messages[0] && <div className="day-marker">{formatDayMarker(detail.messages[0].createdAt)}</div>}
                 {detail.messages.map((message, messageIndex) =>
                   message.role === "system" ? (
                     <div className="console-divider" key={message.id}>
@@ -315,7 +334,7 @@ export function ConsoleView({
                           >
                             {message.text}
                             <small>
-                              {message.createdAt.slice(11, 16)}
+                              {formatClock(message.createdAt)}
                               <CheckCheck size={14} />
                             </small>
                           </button>
@@ -323,7 +342,7 @@ export function ConsoleView({
                           <div className="console-bubble">
                             {message.text}
                             <small>
-                              {message.createdAt.slice(11, 16)}
+                              {formatClock(message.createdAt)}
                               {message.role !== "user" && <CheckCheck size={14} />}
                             </small>
                           </div>
@@ -355,33 +374,46 @@ export function ConsoleView({
                       submit();
                     }
                   }}
-                  aria-label="Mensagem para Ana"
-                  placeholder="{`Escreva para ${firstName}...`}"
+                  aria-label={`Mensagem para ${firstName}`}
+                  placeholder={`Escreva para ${firstName}...`}
                 />
-                <button type="button" aria-label="Enviar mensagem" onClick={submit} disabled={!draft.trim()}>
+                <button type="button" aria-label="Enviar mensagem" onClick={submit} disabled={!draft.trim() || busy}>
                   <Send size={20} />
                 </button>
               </div>
-            ) : (
+            ) : status === "waiting_human" ? (
               <div className="takeover">
                 <div className="takeover-row">
                   <div className="takeover-copy">
                     <span>✋</span>
                     <div>
                       <strong>{firstName} espera um atendente</strong>
-                      <small>Agent pausado · até 12:05</small>
+                      <small>Agent pausado{pausedUntil && ` · responder até ${pausedUntil}`}</small>
                     </div>
                   </div>
-                  <button type="button" className="button-secondary" onClick={onReturnToAgent}>
+                  <button type="button" className="button-secondary" onClick={onReturnToAgent} disabled={busy}>
                     <Bot size={17} />
                     Devolver ao agent
                   </button>
-                  <button type="button" className="button-primary" onClick={onAssume}>
+                  <button type="button" className="button-primary" onClick={onAssume} disabled={busy}>
                     <Headset size={17} />
                     Assumir atendimento
                   </button>
                 </div>
                 <input disabled placeholder="Assuma o atendimento para responder" />
+              </div>
+            ) : (
+              <div className="takeover">
+                <input
+                  disabled
+                  placeholder={
+                    status === "agent"
+                      ? "O Nexo Assist está atendendo esta conversa"
+                      : status === "closed"
+                        ? "Atendimento encerrado"
+                        : `Em atendimento por ${detail.assignedAnalyst?.name ?? "outro analista"}`
+                  }
+                />
               </div>
             )}
           </>
@@ -391,12 +423,13 @@ export function ConsoleView({
         <aside className="ticket-history">
           <header>
             <div>
-              <strong>
-                Chamados {possessive} {firstName}
-              </strong>
+              <strong>Chamados de {firstName}</strong>
               <small>
-                {detail?.tickets.filter((ticket) => ticket.status !== "resolvido" && ticket.status !== "fechado").length ?? 0} abertos ·{" "}
-                {detail?.tickets.filter((ticket) => ticket.status === "resolvido" || ticket.status === "fechado").length ?? 0} encerrados
+                {ticketsUnavailable
+                  ? "sistema de chamados instável"
+                  : `${detail?.tickets.filter((t) => !CLOSED_STATUSES.has(t.status)).length ?? 0} abertos · ${
+                      detail?.tickets.filter((t) => CLOSED_STATUSES.has(t.status)).length ?? 0
+                    } encerrados`}
               </small>
             </div>
             <button type="button" className="icon-button" onClick={() => setShowTickets(false)} aria-label="Fechar painel de chamados">
@@ -406,37 +439,41 @@ export function ConsoleView({
           <div className="history-body">
             <section>
               <h2>Desta conversa</h2>
-              {detail?.tickets[0] && (
+              {related ? (
                 <div className="current-ticket">
                   <div>
-                    {detail.tickets[0].id}
+                    {related.id}
                     <span>
-                      <i className={`status-dot status-${assumed ? "em_andamento" : detail.tickets[0].status}`} />
-                      {assumed ? "Em atendimento" : STATUS_LABEL[detail.tickets[0].status]}
+                      <i className={`status-dot status-${assumed ? "em_andamento" : related.status}`} />
+                      {assumed ? "Em atendimento" : STATUS_LABEL[related.status]}
                     </span>
                   </div>
-                  <strong>{detail.tickets[0].title.replace(" do Windows", "")}</strong>
+                  <strong>{related.title}</strong>
                   <p>
-                    {CATEGORY_LABEL[detail.tickets[0].category]} · prioridade {PRIORITY_LABEL[detail.tickets[0].priority].toLowerCase()}
+                    {CATEGORY_LABEL[related.category]} · prioridade {PRIORITY_LABEL[related.priority].toLowerCase()} · {related.sla.label}
                   </p>
-                  <footer>
-                    <Headset size={16} />
-                    {assumed ? `Assumido por ${analyst.name}` : "Transferido para um analista"}
-                    <time>{assumed ? "10:12" : "10:05"}</time>
-                  </footer>
+                  {(assumed && assumedAt) || transferredAt ? (
+                    <footer>
+                      <Headset size={16} />
+                      {assumed ? `Assumido por ${analyst.name}` : "Transferido para um analista"}
+                      <time>{formatClock((assumed ? assumedAt : transferredAt) ?? "")}</time>
+                    </footer>
+                  ) : null}
                 </div>
+              ) : (
+                <p className="history-empty">Nenhum chamado ligado a esta conversa.</p>
               )}
             </section>
             <section>
               <h2>Outros chamados</h2>
-              {detail?.tickets.slice(1).map((ticket) => (
+              {others.map((ticket) => (
                 <TicketRow key={ticket.id} ticket={ticket} />
               ))}
             </section>
           </div>
           <footer>
-            <button type="button" className="button-secondary">
-              Ver todos os chamados {possessive} {firstName} <ArrowUpRight size={16} />
+            <button type="button" className="button-secondary" onClick={() => setShowAllTickets((v) => !v)}>
+              {showAllTickets ? "Mostrar só os recentes" : `Ver todos os chamados de ${firstName}`} <ArrowUpRight size={16} />
             </button>
           </footer>
         </aside>

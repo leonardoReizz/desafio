@@ -1,7 +1,17 @@
 import { KeyRound, LockKeyhole, Mail, RotateCcw } from "lucide-react";
 import type { Employee } from "@nexo/contracts";
 import { EmployeeShell } from "./EmployeeShell";
-export function ProfileView({ employee, resetRequested, onReset }: { employee: Employee; resetRequested: boolean; onReset: () => void }) {
+export function ProfileView({
+  employee,
+  passwordAgeDays,
+  resetRequested,
+  onReset,
+}: {
+  employee: Employee;
+  passwordAgeDays: number;
+  resetRequested: boolean;
+  onReset: () => void;
+}) {
   return (
     <EmployeeShell employee={employee} section="perfil">
       <main className="profile-page">
@@ -28,7 +38,7 @@ export function ProfileView({ employee, resetRequested, onReset }: { employee: E
               </span>
               <span>
                 <strong>Senha</strong>
-                <small>Alterada há 42 dias</small>
+                <small>Alterada há {passwordAgeDays} dias</small>
               </span>
               <button type="button" className="button-secondary" onClick={onReset}>
                 <RotateCcw size={17} />
