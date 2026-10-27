@@ -13,7 +13,7 @@ Requisitos: Node 22+ e pnpm 10.
 
 ```bash
 pnpm install
-cp .env.example .env          # preencha ANTHROPIC_API_KEY e TICKETS_SERVICE_TOKEN (openssl rand -hex 32)
+cp .env.example .env          # preencha FAL_KEY (ou ANTHROPIC_API_KEY) e TICKETS_SERVICE_TOKEN (openssl rand -hex 32)
 pnpm seed                     # cria chamados, usuários e conversas de exemplo
 pnpm dev                      # web em http://localhost:3000 + serviço de chamados em :4001
 ```
@@ -29,7 +29,7 @@ Contas de exemplo (qualquer senha):
 
 Outros comandos: `pnpm test` · `pnpm typecheck` · `pnpm lint` · `pnpm build && pnpm start`.
 
-Sem `ANTHROPIC_API_KEY` a aplicação funciona nas rotas determinísticas (seleção de chamado, confirmação,
+Sem chave de LLM a aplicação funciona nas rotas determinísticas (seleção de chamado, confirmação,
 transferência, console) e responde com transparência quando a mensagem precisa do modelo.
 
 ### Roteiro rápido de teste
@@ -121,10 +121,16 @@ intervieram, o modelo, a latência e os tokens. **Os passos vêm da execução r
 
 ## Modelo de LLM
 
-Claude via _model router_ do Mastra (`anthropic/<modelo>`), padrão **`claude-opus-5-5` com esforço baixo**
-(`LLM_EFFORT=low`): o agent precisa escolher bem entre ferramentas e respeitar regras em português, e o
-esforço baixo mantém latência e custo sob controle. O modelo é configurável por `LLM_MODEL`
-(`claude-sonnet-5-5` ou `claude-haiku-5-5` para baratear).
+Claude via _model router_ do Mastra, padrão **Opus 5.5 com esforço baixo** (`LLM_EFFORT=low`): o agent
+precisa escolher bem entre ferramentas e respeitar regras em português, e o esforço baixo mantém latência e
+custo sob controle.
+
+| `LLM_PROVIDER` | Chave               | Como chama                                                                          | Modelo padrão               |
+| -------------- | ------------------- | ----------------------------------------------------------------------------------- | --------------------------- |
+| `fal` (padrão) | `FAL_KEY`           | endpoint OpenAI-compatível do fal.ai (OpenRouter por baixo), `Authorization: Key …` | `anthropic/claude-opus-5.5` |
+| `anthropic`    | `ANTHROPIC_API_KEY` | API da Anthropic direto, com cache de prefixo explícito                             | `claude-opus-5-5`           |
+
+`LLM_MODEL` troca o modelo (ex.: `anthropic/claude-haiku-5.5` no fal para baratear).
 
 Uso consciente do modelo:
 

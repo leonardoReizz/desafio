@@ -13,7 +13,9 @@ Decisões de arquitetura: `docs/adr/0001-arquitetura-nexo-assist.md` (leia antes
 - pnpm workspaces · Node 22.
 - `apps/web`: Next.js 16 (App Router, React 19, Tailwind v4). **Leia `apps/web/AGENTS.md`**: a versão
   do Next tem mudanças; consulte `node_modules/next/dist/docs/` antes de usar APIs do Next.
-- Agent: Mastra (`@mastra/core`) + `@ai-sdk/anthropic`. Modelo via `LLM_MODEL`.
+- Agent: Mastra (`@mastra/core`), model router. Provider via `LLM_PROVIDER`: `fal` (padrão, endpoint
+  OpenAI-compatível do fal.ai, auth `Key <FAL_KEY>`) ou `anthropic` (direto). Modelo via `LLM_MODEL`.
+  Toda a escolha de provider fica em `apps/web/src/server/agent/llm.ts` (`resolveModel`).
 - `services/tickets`: Hono + better-sqlite3 (processo separado, porta 4001).
 - `packages/contracts`: schemas zod e tipos compartilhados — **única fonte de verdade** de contratos.
 - Testes: Vitest. Ícones: `lucide-react`. Fontes: Schibsted Grotesk (UI), Newsreader (títulos display).

@@ -144,11 +144,19 @@ logar, o chat reabre a última conversa não encerrada.
 
 ### 2.8 Modelo de LLM
 
-Claude pelo _model router_ do Mastra (`anthropic/<modelo>`, provider Anthropic do AI SDK por baixo). Padrão `claude-opus-5-5` com esforço
-baixo — melhor qualidade de decisão e de uso de ferramentas; configurável por `LLM_MODEL`
-(ex.: `claude-haiku-5-5` para reduzir custo ~40×). Custo controlado por: prompt de sistema estável
-(cache de prefixo), janela de histórico curta, tools retornando resumos, `max_tokens` baixo e
-limite de mensagens.
+Claude pelo _model router_ do Mastra, com o provider escolhido por `LLM_PROVIDER`:
+
+- **`fal` (padrão)** — endpoint OpenAI-compatível do fal.ai (OpenRouter por baixo,
+  `https://fal.run/openrouter/router/openai/v1`, autenticação `Authorization: Key <FAL_KEY>`). Modelo padrão
+  `anthropic/claude-opus-5.5`. Ferramentas e saída estruturada (`response_format: json_schema`) passam pelo
+  formato OpenAI; o esforço vai como `reasoning.effort`. Escolhido por usar crédito já existente na conta fal.
+- **`anthropic`** — API da Anthropic direto (`anthropic/claude-opus-5-5`), com cache de prefixo explícito
+  (`cacheControl`) e `effort` nativo.
+
+Esforço baixo por padrão — boa qualidade de decisão e de uso de ferramentas com latência e custo contidos;
+modelo configurável por `LLM_MODEL` (ex.: Haiku 5.5 para reduzir custo ~40×). Custo controlado por: prompt de
+sistema estável, janela de histórico curta, tools retornando resumos, `max_tokens` baixo e limite de
+mensagens. Trade-off do fal: o cache de prefixo explícito da Anthropic não é configurado nesse caminho.
 
 ## 3. Alternativas consideradas
 

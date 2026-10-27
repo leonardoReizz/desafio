@@ -367,7 +367,7 @@ function failureDecision(ctx: TurnContext, e: unknown): Decision {
     };
   }
   if (e instanceof LlmNotConfiguredError) {
-    ctx.recorder.guardrails.add("Modelo de linguagem não configurado (ANTHROPIC_API_KEY)");
+    ctx.recorder.guardrails.add("Modelo de linguagem não configurado (FAL_KEY ou ANTHROPIC_API_KEY)");
   } else {
     console.error("[agent] falha no turno", e instanceof Error ? e.message : "erro desconhecido");
     ctx.recorder.guardrails.add("Falha ao consultar o modelo de linguagem");

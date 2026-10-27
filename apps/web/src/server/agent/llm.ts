@@ -1,8 +1,8 @@
 import "server-only";
-import { Agent } from "@mastra/core/agent";
+import { Agent, type AgentConfig } from "@mastra/core/agent";
 import { z } from "zod";
 import { AgentAction, Intent } from "@nexo/contracts";
-import { env } from "../env";
+import { env, type Env } from "../env";
 import { AGENT_INSTRUCTIONS } from "./prompt";
 import type { createAgentTools } from "./tools";
 
@@ -41,19 +41,45 @@ export interface AgentRunner {
 
 export class LlmNotConfiguredError extends Error {}
 
-/** Runner real: Mastra Agent + Claude. */
+type ProviderOptions =
+  | { fal: { reasoning: { effort: Env["LLM_EFFORT"] } } }
+  | { anthropic: { effort: Env["LLM_EFFORT"]; cacheControl: { type: "ephemeral" }; structuredOutputMode: "auto" } };
+
+/** Modelo e opções do provider configurado. Chaves só vêm do .env. */
+function resolveModel(): { modelId: string; model: AgentConfig["model"]; providerOptions: ProviderOptions } {
+  const { LLM_PROVIDER, LLM_MODEL, LLM_EFFORT, FAL_KEY, FAL_BASE_URL, ANTHROPIC_API_KEY } = env();
+  if (LLM_PROVIDER === "fal") {
+    if (!FAL_KEY) throw new LlmNotConfiguredError("FAL_KEY não configurada");
+    const modelId = LLM_MODEL || "anthropic/claude-opus-5.5";
+    return {
+      modelId,
+      // Endpoint OpenAI-compatível do fal.ai (OpenRouter por baixo); o fal autentica com "Key", não "Bearer".
+      model: { providerId: "fal", modelId, url: FAL_BASE_URL, headers: { Authorization: `Key ${FAL_KEY}` } },
+      // Campos extras vão no corpo da requisição: esforço de raciocínio no formato do OpenRouter.
+      providerOptions: { fal: { reasoning: { effort: LLM_EFFORT } } },
+    };
+  }
+  if (!ANTHROPIC_API_KEY) throw new LlmNotConfiguredError("ANTHROPIC_API_KEY não configurada");
+  const modelId = LLM_MODEL || "claude-opus-5-5";
+  return {
+    modelId,
+    model: { id: `anthropic/${modelId}` as const, apiKey: ANTHROPIC_API_KEY },
+    providerOptions: {
+      anthropic: {
+        effort: LLM_EFFORT,
+        // Prompt de sistema + tools são estáveis: cache de prefixo reduz custo por mensagem.
+        cacheControl: { type: "ephemeral" },
+        structuredOutputMode: "auto",
+      },
+    },
+  };
+}
+
+/** Runner real: Mastra Agent + Claude (via fal.ai ou Anthropic direto). */
 export const mastraRunner: AgentRunner = {
   async run({ messages, tools, onReplyDelta, signal }) {
-    const { ANTHROPIC_API_KEY, LLM_MODEL, LLM_EFFORT } = env();
-    if (!ANTHROPIC_API_KEY) throw new LlmNotConfiguredError("ANTHROPIC_API_KEY não configurada");
-    const agent = new Agent({
-      id: "nexo-assist",
-      name: "Nexo Assist",
-      instructions: AGENT_INSTRUCTIONS,
-      // Model router do Mastra (usa o provider Anthropic do AI SDK por baixo); chave vem do .env.
-      model: { id: `anthropic/${LLM_MODEL}` as const, apiKey: ANTHROPIC_API_KEY },
-      tools,
-    });
+    const { modelId, model, providerOptions } = resolveModel();
+    const agent = new Agent({ id: "nexo-assist", name: "Nexo Assist", instructions: AGENT_INSTRUCTIONS, model, tools });
 
     const modelMessages = messages.map((m) =>
       m.role === "user" ? { role: "user" as const, content: m.content } : { role: "assistant" as const, content: m.content },
@@ -62,14 +88,7 @@ export const mastraRunner: AgentRunner = {
       maxSteps: 6,
       abortSignal: signal,
       modelSettings: { maxOutputTokens: 1500 },
-      providerOptions: {
-        anthropic: {
-          effort: LLM_EFFORT,
-          // Prompt de sistema + tools são estáveis: cache de prefixo reduz custo por mensagem.
-          cacheControl: { type: "ephemeral" },
-          structuredOutputMode: "auto",
-        },
-      },
+      providerOptions,
       structuredOutput: { schema: AgentDecision },
     });
 
@@ -90,7 +109,7 @@ export const mastraRunner: AgentRunner = {
       decision: parsed.success ? parsed.data : null,
       fallbackText: parsed.success ? "" : await stream.text.catch(() => ""),
       usage: usage ? { inputTokens: usage.inputTokens ?? 0, outputTokens: usage.outputTokens ?? 0 } : null,
-      model: LLM_MODEL,
+      model: modelId,
     };
   },
 };

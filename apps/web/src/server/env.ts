@@ -3,8 +3,13 @@ import { z } from "zod";
 
 const Env = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  // fal = endpoint OpenAI-compatível do fal.ai (OpenRouter por baixo); anthropic = API da Anthropic direto.
+  LLM_PROVIDER: z.enum(["fal", "anthropic"]).default("fal"),
+  FAL_KEY: z.string().optional(),
+  FAL_BASE_URL: z.url().default("https://fal.run/openrouter/router/openai/v1"),
   ANTHROPIC_API_KEY: z.string().optional(),
-  LLM_MODEL: z.string().default("claude-opus-5-5"),
+  // Vazio = padrão do provider (fal: anthropic/claude-opus-5.5; anthropic: claude-opus-5-5).
+  LLM_MODEL: z.string().optional(),
   LLM_EFFORT: z.enum(["low", "medium", "high"]).default("low"),
   APP_DB_PATH: z.string().default("./data/app.db"),
   TICKETS_SERVICE_URL: z.url().default("http://localhost:4001"),
