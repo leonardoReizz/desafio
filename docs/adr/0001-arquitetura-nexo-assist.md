@@ -13,15 +13,15 @@ um analista quando necessário. Do outro lado, um console permite ao analista as
 
 Forças que moldam a arquitetura:
 
-| Força | Consequência |
-| --- | --- |
-| "Transparência é a parte mais importante" | Toda resposta do agent carrega um `DecisionTrace` estruturado e persistido. |
-| Regras do Anexo A precisam ser seguidas sempre | Regras críticas são **código** (guardrails), não só prompt. |
-| Sistema de chamados é legado e instável | Serviço separado, com falhas simuladas, e cliente com retry/backoff/timeout. |
-| Privacidade entre funcionários | Identidade vem da sessão, nunca do LLM. Ferramentas são "pré-escopadas" ao usuário. |
-| Persistência entre reinícios | SQLite em arquivo para app e serviço de chamados. |
-| Custo por conversa | Janela curta de histórico, prompt estável (cacheável), ferramentas que devolvem resumos. |
-| Mastra (preferência) | Agent com Mastra + AI SDK. |
+| Força                                          | Consequência                                                                             |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| "Transparência é a parte mais importante"      | Toda resposta do agent carrega um `DecisionTrace` estruturado e persistido.              |
+| Regras do Anexo A precisam ser seguidas sempre | Regras críticas são **código** (guardrails), não só prompt.                              |
+| Sistema de chamados é legado e instável        | Serviço separado, com falhas simuladas, e cliente com retry/backoff/timeout.             |
+| Privacidade entre funcionários                 | Identidade vem da sessão, nunca do LLM. Ferramentas são "pré-escopadas" ao usuário.      |
+| Persistência entre reinícios                   | SQLite em arquivo para app e serviço de chamados.                                        |
+| Custo por conversa                             | Janela curta de histórico, prompt estável (cacheável), ferramentas que devolvem resumos. |
+| Mastra (preferência)                           | Agent com Mastra + AI SDK.                                                               |
 
 ## 2. Decisão
 
@@ -79,7 +79,7 @@ valida que o rascunho pertence à conversa e está `pending`.
 mesmo funcionário com mesma categoria e similaridade de título; se houver, o rascunho vira
 `update` daquele chamado. Resolvidos há ≤ 7 dias viram `reopen`.
 
-**Prioridade:** o LLM extrai *impacto* (quem é afetado) e *urgência* (compromisso hoje? há
+**Prioridade:** o LLM extrai _impacto_ (quem é afetado) e _urgência_ (compromisso hoje? há
 alternativa?); a **matriz do Anexo A é aplicada em código** (`sla/priority.ts`), e o prazo é
 calculado em horário útil (seg–sex, 8h–18h; crítico 24h). Isso torna a prioridade testável.
 
@@ -107,6 +107,7 @@ calculado em horário útil (seg–sex, 8h–18h; crítico 24h). Isso torna a pr
 ### 2.5 Persistência
 
 SQLite (better-sqlite3) em arquivo, WAL:
+
 - `apps/web/data/app.db`: employees, analysts, sessions, conversations (status, handoff), messages
   (texto + blocks JSON + trace JSON), drafts, rate limits.
 - `services/tickets/data/tickets.db`: tickets, updates, idempotency keys.
@@ -126,7 +127,7 @@ logar, o chat reabre a última conversa não encerrada.
   funcionário da conversa via serviço, com o analista autenticado.
 - Chaves (LLM, segredos) só em `.env`; `.env.example` sem valores. Nada de chave no cliente.
 - Entrada validada com zod em todas as fronteiras (route handlers, tools, serviço).
-- Prompt injection: dados de chamados/artigos entram como *dados* delimitados; ações sensíveis
+- Prompt injection: dados de chamados/artigos entram como _dados_ delimitados; ações sensíveis
   dependem de guardrails de código, não da obediência do modelo.
 - Rate limit por usuário e por IP nas rotas do agent; limite de 30 mensagens/sessão; teto de
   tokens por resposta. Em deploy, `DEMO_DAILY_BUDGET` limita chamadas ao LLM.
@@ -143,7 +144,7 @@ logar, o chat reabre a última conversa não encerrada.
 
 ### 2.8 Modelo de LLM
 
-Claude pelo *model router* do Mastra (`anthropic/<modelo>`, provider Anthropic do AI SDK por baixo). Padrão `claude-opus-5-5` com esforço
+Claude pelo _model router_ do Mastra (`anthropic/<modelo>`, provider Anthropic do AI SDK por baixo). Padrão `claude-opus-5-5` com esforço
 baixo — melhor qualidade de decisão e de uso de ferramentas; configurável por `LLM_MODEL`
 (ex.: `claude-haiku-5-5` para reduzir custo ~40×). Custo controlado por: prompt de sistema estável
 (cache de prefixo), janela de histórico curta, tools retornando resumos, `max_tokens` baixo e
@@ -151,14 +152,14 @@ limite de mensagens.
 
 ## 3. Alternativas consideradas
 
-| Alternativa | Por que não |
-| --- | --- |
-| LangGraph.js | Mastra é a preferência do PRD; o fluxo cabe num agent com tools + guardrails. |
-| Grafo/workflow rígido por intenção | Conversa real mistura intenções; perde naturalidade. Mantivemos o LLM decidindo e o código validando. |
-| Serviço de chamados dentro do Next (mesmo processo) | PRD pede separado; processo próprio simula de verdade latência/indisponibilidade. |
-| Postgres | Exige infra para rodar localmente; SQLite atende persistência e "poucos comandos". |
-| WebSocket para o chat | SSE cobre streaming servidor→cliente com menos complexidade. |
-| Mastra Memory para histórico | Controlamos a janela e o formato manualmente (custo previsível, trace junto da mensagem). |
+| Alternativa                                         | Por que não                                                                                           |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| LangGraph.js                                        | Mastra é a preferência do PRD; o fluxo cabe num agent com tools + guardrails.                         |
+| Grafo/workflow rígido por intenção                  | Conversa real mistura intenções; perde naturalidade. Mantivemos o LLM decidindo e o código validando. |
+| Serviço de chamados dentro do Next (mesmo processo) | PRD pede separado; processo próprio simula de verdade latência/indisponibilidade.                     |
+| Postgres                                            | Exige infra para rodar localmente; SQLite atende persistência e "poucos comandos".                    |
+| WebSocket para o chat                               | SSE cobre streaming servidor→cliente com menos complexidade.                                          |
+| Mastra Memory para histórico                        | Controlamos a janela e o formato manualmente (custo previsível, trace junto da mensagem).             |
 
 ## 4. Consequências
 
