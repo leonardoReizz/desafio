@@ -129,6 +129,10 @@ export const CreateTicketInput = z.object({
 });
 export type CreateTicketInput = z.infer<typeof CreateTicketInput>;
 
+/** Status que um analista pode aplicar pelo console. */
+export const AnalystTicketStatus = z.enum(["em_andamento", "aguardando_usuario", "resolvido"]);
+export type AnalystTicketStatus = z.infer<typeof AnalystTicketStatus>;
+
 export const AddUpdateInput = z.object({
   author: TicketUpdate.shape.author,
   authorName: z.string(),
@@ -136,6 +140,8 @@ export const AddUpdateInput = z.object({
   /** Reabrir chamado resolvido há até 7 dias. */
   reopen: z.boolean().default(false),
   priority: Priority.optional(),
+  /** Só analistas: muda o status junto com a atualização. */
+  status: AnalystTicketStatus.optional(),
 });
 export type AddUpdateInput = z.infer<typeof AddUpdateInput>;
 

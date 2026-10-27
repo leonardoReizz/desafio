@@ -90,6 +90,29 @@ describe("tickets service", () => {
     expect(body.ticket.resolvedAt).toBeNull();
   });
 
+  it("analista resolve chamado: status, data de resolução e prazo atendido", async () => {
+    const res = await ctx.call("/v1/tickets/INC-20311/updates", {
+      method: "POST",
+      body: JSON.stringify({ author: "analista", authorName: "Rafael Lima", text: "Driver atualizado.", status: "resolvido" }),
+    });
+    expect(res.status).toBe(200);
+    const { ticket } = (await res.json()) as {
+      ticket: { status: string; resolvedAt: string | null; lastServiceUpdateAt: string | null; updates: { text: string }[] };
+    };
+    expect(ticket.status).toBe("resolvido");
+    expect(ticket.resolvedAt).toBe(NOW.toISOString());
+    expect(ticket.lastServiceUpdateAt).toBe(NOW.toISOString());
+    expect(ticket.updates.at(-1)?.text).toBe("Driver atualizado.");
+  });
+
+  it("funcionário não muda status do chamado", async () => {
+    const res = await ctx.call("/v1/tickets/INC-20311/updates", {
+      method: "POST",
+      body: JSON.stringify({ author: "funcionario", authorName: "Ana Souza", text: "Pode fechar.", status: "resolvido" }),
+    });
+    expect(res.status).toBe(403);
+  });
+
   it("recusa reabrir chamado resolvido há mais de 7 dias", async () => {
     const res = await ctx.call("/v1/tickets/INC-19877/updates", {
       method: "POST",

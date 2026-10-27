@@ -4,11 +4,12 @@ export type ConversationEvent = "transfer" | "assume" | "return_to_agent" | "clo
 
 /**
  *  agent ──transfer──▶ waiting_human ──assume──▶ human ──return_to_agent──▶ agent
- *    ▲                     │                       │
- *    └──return_to_agent────┘                       └──close──▶ closed
+ *    │ ▲                   │                       ▲ │
+ *    │ └──return_to_agent──┘                       │ └──close──▶ closed
+ *    └──────────────────assume─────────────────────┘  (analista pode entrar sem transferência)
  */
 const TRANSITIONS: Record<ConversationStatus, Partial<Record<ConversationEvent, ConversationStatus>>> = {
-  agent: { transfer: "waiting_human", close: "closed" },
+  agent: { transfer: "waiting_human", assume: "human", close: "closed" },
   waiting_human: { assume: "human", return_to_agent: "agent", close: "closed" },
   human: { return_to_agent: "agent", close: "closed" },
   closed: {},

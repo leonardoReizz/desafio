@@ -2729,3 +2729,107 @@ textarea:focus-visible {
     padding: 0 6px;
   }
 }
+/* Ações do analista sobre chamados (console) */
+.console-alert {
+  margin: 10px 16px 0;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: #fdecec;
+  color: #b4232a;
+  font-size: 13px;
+}
+.current-ticket[role="button"],
+.history-ticket {
+  cursor: pointer;
+}
+.current-ticket[role="button"]:hover,
+.current-ticket.expanded,
+.history-ticket.expanded {
+  border-color: #9fcaf5;
+}
+.current-ticket:focus-visible,
+.history-ticket:focus-visible {
+  outline: 2px solid var(--cta);
+  outline-offset: 2px;
+}
+.history-ticket .history-chevron {
+  transition: transform 0.15s;
+}
+.history-ticket.expanded .history-chevron {
+  transform: rotate(90deg);
+}
+.ticket-manage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 14px;
+  padding: 12px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: #f8fafc;
+  font-size: 13px;
+}
+.ticket-manage-desc {
+  margin: 0;
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+.ticket-manage-updates {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 10px;
+  border-left: 2px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ticket-manage-updates small {
+  display: block;
+  color: #75808d;
+  font-size: 11px;
+}
+.ticket-manage-updates span {
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+.ticket-manage textarea {
+  min-height: 64px;
+  resize: vertical;
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  background: #fff;
+}
+.ticket-manage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ticket-manage-actions button {
+  gap: 6px;
+  font-size: 12px;
+  min-height: 34px;
+}
+.ticket-manage-actions .button-primary {
+  margin-left: auto;
+}
+.ticket-manage-closed {
+  margin: 0;
+  color: #697485;
+}
+@media (max-width: 700px) {
+  .ticket-manage-actions button {
+    flex: 1 1 45%;
+    justify-content: center;
+    min-height: 40px;
+  }
+  .ticket-manage-actions .button-primary {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+  .ticket-manage textarea {
+    font-size: 16px;
+  }
+}

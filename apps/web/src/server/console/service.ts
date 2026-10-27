@@ -1,4 +1,6 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
+import { STATUS_LABEL, type AnalystTicketStatus, type TicketView } from "@nexo/contracts";
 import type { Analyst, ChatMessage, ConversationDetail, ConversationListFilter, ConversationListItem } from "@nexo/contracts";
 import type { ConversationRepository, StoredConversation } from "../db/conversations";
 import type { UserRepository } from "../db/users";
@@ -118,8 +120,13 @@ function systemNote(deps: Deps, conversationId: string, text: string): ChatMessa
 export function assume(deps: Deps, analyst: Analyst, conversationId: string): void {
   const c = deps.conversations.get(conversationId);
   if (!c) throw new NotFound("Conversa não encontrada");
+  const from = c.status;
   deps.conversations.update(c.id, { status: transition(c.status, "assume"), assignedAnalystId: analyst.id });
-  systemNote(deps, c.id, `${analyst.name} assumiu · agent pausado`);
+  systemNote(
+    deps,
+    c.id,
+    from === "agent" ? `${analyst.name} entrou na conversa · agent pausado` : `${analyst.name} assumiu · agent pausado`,
+  );
 }
 
 export function returnToAgent(deps: Deps, analyst: Analyst, conversationId: string): void {
@@ -142,4 +149,30 @@ export function sendAnalystMessage(deps: Deps, analyst: Analyst, conversationId:
   // Responder só depois de assumir — o mesmo gesto que pausa o agent.
   if (c.status !== "human" || c.assignedAnalystId !== analyst.id) throw new InvalidTransitionError(c.status, "assume");
   return deps.conversations.addMessage(c.id, { role: "analyst", text, authorName: analyst.name, authorBadge: `Suporte ${analyst.team}` });
+}
+
+/**
+ * Analista atualiza um chamado do funcionário DESTA conversa: nota e/ou status.
+ * O escopo vem da conversa (o serviço de chamados filtra pelo solicitante), nunca do cliente.
+ */
+export async function updateTicket(
+  deps: Deps,
+  analyst: Analyst,
+  conversationId: string,
+  ticketId: string,
+  input: { status: AnalystTicketStatus | null; note: string | null },
+): Promise<TicketView> {
+  const c = deps.conversations.get(conversationId);
+  if (!c) throw new NotFound("Conversa não encontrada");
+  const text = input.note?.trim() || (input.status ? `Status alterado para ${STATUS_LABEL[input.status].toLowerCase()}.` : "");
+  const { data } = await deps.tickets.addUpdate(
+    ticketId,
+    c.employeeId,
+    { author: "analista", authorName: analyst.name, text, reopen: false, ...(input.status ? { status: input.status } : {}) },
+    `console-${randomUUID()}`,
+  );
+  // O funcionário vê no chat o que mudou no chamado.
+  const what = input.status ? `marcou o ${ticketId} como ${STATUS_LABEL[input.status].toLowerCase()}` : `registrou uma nota no ${ticketId}`;
+  systemNote(deps, c.id, `${analyst.name} ${what}`);
+  return toTicketView(data, deps.now());
 }

@@ -20,6 +20,7 @@ import {
   PRIORITY_LABEL,
   STATUS_LABEL,
   type Analyst,
+  type AnalystTicketStatus,
   type ConversationDetail,
   type ConversationListFilter,
   type ConversationListItem,
@@ -30,6 +31,7 @@ import { Brand } from "./Brand";
 import { LogoutButton } from "./LogoutButton";
 import { isReadBy, ReadReceipt } from "./ReadReceipt";
 import { DecisionTracePanel } from "./DecisionTracePanel";
+import { TicketManage } from "./TicketManage";
 
 const filterLabels: { id: ConversationListFilter; label: string }[] = [
   { id: "todas", label: "Todas" },
@@ -58,9 +60,9 @@ function listStatus(item: ConversationListItem, analystId: string) {
 function systemEventAt(detail: ConversationDetail, needle: string): string | null {
   return [...detail.messages].reverse().find((m) => m.role === "system" && m.text.includes(needle))?.createdAt ?? null;
 }
-function TicketRow({ ticket }: { ticket: TicketView }) {
+function TicketRow({ ticket, expanded, onToggle }: { ticket: TicketView; expanded: boolean; onToggle: () => void }) {
   return (
-    <button type="button" className="history-ticket">
+    <button type="button" className={`history-ticket ${expanded ? "expanded" : ""}`} aria-expanded={expanded} onClick={onToggle}>
       <span className={`status-dot status-${ticket.status}`} />
       <span>
         <strong>{ticket.title}</strong>
@@ -69,7 +71,7 @@ function TicketRow({ ticket }: { ticket: TicketView }) {
           {ticket.resolvedAt && ` em ${formatDayMonth(ticket.resolvedAt)}`}
         </small>
       </span>
-      <ChevronRight size={17} />
+      <ChevronRight size={17} className="history-chevron" />
     </button>
   );
 }
@@ -89,6 +91,8 @@ export interface ConsoleViewProps {
   onReturnToAgent: () => void;
   onClose: () => void;
   onSendAsAnalyst: (text: string) => void;
+  /** Muda status e/ou registra nota; resolve true se deu certo. */
+  onUpdateTicket: (ticketId: string, status: AnalystTicketStatus | null, note: string | null) => Promise<boolean>;
   loading: boolean;
   error: string | null;
   /** Ação em andamento (assumir/devolver/encerrar/enviar): desabilita botões contra duplo clique. */
@@ -111,6 +115,7 @@ export function ConsoleView({
   onReturnToAgent,
   onClose,
   onSendAsAnalyst,
+  onUpdateTicket,
   loading,
   error,
   busy = false,
@@ -139,6 +144,8 @@ export function ConsoleView({
   const assumed = status === "human" && detail?.conversation.assignedAnalystId === analyst.id;
   const firstName = detail?.employee.name.split(" ")[0] ?? "funcionário";
   const [showAllTickets, setShowAllTickets] = useState(false);
+  const [openTicketId, setOpenTicketId] = useState<string | null>(null);
+  const toggleTicket = (id: string) => setOpenTicketId((cur) => (cur === id ? null : id));
   const related = detail?.tickets.find((t) => t.id === detail.conversation.relatedTicketId) ?? null;
   const others = (detail?.tickets ?? []).filter(
     (t) => t.id !== related?.id && (showAllTickets || !CLOSED_STATUSES.has(t.status) || t.resolvedAt),
@@ -213,7 +220,7 @@ export function ConsoleView({
                 </div>
               ))}
             </div>
-          ) : error ? (
+          ) : error && filtered.length === 0 ? (
             <div className="console-error" role="alert">
               {error}
             </div>
@@ -258,6 +265,11 @@ export function ConsoleView({
         </div>
       </section>
       <section className="console-conversation">
+        {error && detail && (
+          <div className="console-alert" role="alert">
+            {error}
+          </div>
+        )}
         {!detail ? (
           loading ? (
             <div className="console-loading-main" role="status" aria-label="Carregando conversa">
@@ -437,16 +449,29 @@ export function ConsoleView({
                 </div>
                 <input disabled placeholder="Assuma o atendimento para responder" />
               </div>
+            ) : status === "agent" ? (
+              <div className="takeover">
+                <div className="takeover-row">
+                  <div className="takeover-copy">
+                    <span>🤖</span>
+                    <div>
+                      <strong>O Nexo Assist está atendendo {firstName}</strong>
+                      <small>Você pode entrar na conversa; o agent fica pausado</small>
+                    </div>
+                  </div>
+                  <button type="button" className="button-primary" onClick={onAssume} disabled={busy}>
+                    <Headset size={17} />
+                    Assumir atendimento
+                  </button>
+                </div>
+                <input disabled placeholder="Assuma o atendimento para responder" />
+              </div>
             ) : (
               <div className="takeover">
                 <input
                   disabled
                   placeholder={
-                    status === "agent"
-                      ? "O Nexo Assist está atendendo esta conversa"
-                      : status === "closed"
-                        ? "Atendimento encerrado"
-                        : `Em atendimento por ${detail.assignedAnalyst?.name ?? "outro analista"}`
+                    status === "closed" ? "Atendimento encerrado" : `Em atendimento por ${detail.assignedAnalyst?.name ?? "outro analista"}`
                   }
                 />
               </div>
@@ -475,7 +500,19 @@ export function ConsoleView({
             <section>
               <h2>Desta conversa</h2>
               {related ? (
-                <div className="current-ticket">
+                <div
+                  className={`current-ticket ${openTicketId === related.id ? "expanded" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={openTicketId === related.id}
+                  onClick={() => toggleTicket(related.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleTicket(related.id);
+                    }
+                  }}
+                >
                   <div>
                     {related.id}
                     <span>
@@ -498,11 +535,15 @@ export function ConsoleView({
               ) : (
                 <p className="history-empty">Nenhum chamado ligado a esta conversa.</p>
               )}
+              {related && openTicketId === related.id && <TicketManage ticket={related} busy={busy} onUpdate={onUpdateTicket} />}
             </section>
             <section>
               <h2>Outros chamados</h2>
               {others.map((ticket) => (
-                <TicketRow key={ticket.id} ticket={ticket} />
+                <div key={ticket.id}>
+                  <TicketRow ticket={ticket} expanded={openTicketId === ticket.id} onToggle={() => toggleTicket(ticket.id)} />
+                  {openTicketId === ticket.id && <TicketManage ticket={ticket} busy={busy} onUpdate={onUpdateTicket} />}
+                </div>
               ))}
             </section>
           </div>

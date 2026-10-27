@@ -15,8 +15,12 @@ describe("máquina de estados da conversa", () => {
     expect(transition("waiting_human", "return_to_agent")).toBe("agent");
   });
 
-  it("não permite assumir conversa que está com o agent", () => {
-    expect(() => transition("agent", "assume")).toThrow(InvalidTransitionError);
+  it("analista pode assumir uma conversa que está com o agent", () => {
+    expect(transition("agent", "assume")).toBe("human");
+  });
+
+  it("não permite assumir de novo uma conversa já com analista", () => {
+    expect(() => transition("human", "assume")).toThrow(InvalidTransitionError);
   });
 
   it("conversa encerrada é terminal", () => {

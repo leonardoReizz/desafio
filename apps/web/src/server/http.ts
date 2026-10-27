@@ -34,8 +34,12 @@ export function handleError(e: unknown): NextResponse {
     return jsonError(409, "invalid_transition", "A conversa não está em um estado que permita essa ação.");
   if (e instanceof TicketServiceUnavailableError)
     return jsonError(503, "tickets_unavailable", "O sistema de chamados está instável. Tente de novo em instantes.");
-  if (e instanceof TicketServiceError)
-    return jsonError(e.status === 404 ? 404 : 502, e.code, e.status === 404 ? "Não encontrado" : "Erro no sistema de chamados");
+  if (e instanceof TicketServiceError) {
+    if (e.status === 404) return jsonError(404, e.code, "Não encontrado");
+    // Regras de negócio do legado (ex.: chamado já encerrado) têm mensagens seguras para o usuário.
+    if (e.status === 409 || e.status === 422) return jsonError(409, e.code, e.message);
+    return jsonError(502, e.code, "Erro no sistema de chamados");
+  }
   console.error("[api] erro inesperado", e instanceof Error ? e.message : "desconhecido");
   return jsonError(500, "internal", "Erro inesperado. Tente de novo.");
 }

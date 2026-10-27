@@ -16,7 +16,7 @@ export interface AppOptions {
 
 type Vars = { Variables: { requesterId: string } };
 
-const ERROR_STATUS = { not_found: 404, conflict: 409, reopen_window_expired: 422, not_open: 409 } as const;
+const ERROR_STATUS = { not_found: 404, conflict: 409, reopen_window_expired: 422, not_open: 409, forbidden: 403 } as const;
 
 function errorBody(code: string, message: string): ApiError {
   return { error: { code, message } };

@@ -16,7 +16,7 @@ const REOPEN_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export class DomainError extends Error {
   constructor(
-    readonly code: "not_found" | "conflict" | "reopen_window_expired" | "not_open",
+    readonly code: "not_found" | "conflict" | "reopen_window_expired" | "not_open" | "forbidden",
     message: string,
   ) {
     super(message);
@@ -178,6 +178,10 @@ export class TicketRepository {
         resolvedAt = null;
       } else if (!isOpen) {
         throw new DomainError("not_open", `Chamado ${id} está ${ticket.status}; só é possível reabrir`);
+      } else if (input.status) {
+        if (input.author !== "analista") throw new DomainError("forbidden", "Só analistas mudam o status do chamado");
+        status = input.status;
+        if (status === "resolvido") resolvedAt = at;
       } else if (ticket.status === "aguardando_usuario" && input.author === "funcionario") {
         status = "aguardando_analista";
       }

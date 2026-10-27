@@ -87,8 +87,8 @@ export function ConsoleContainer({ analyst }: { analyst: Analyst }) {
   // Ao trocar de conversa, não mostra o detalhe da anterior enquanto carrega.
   const shownDetail = detail?.conversation.id === selectedId ? detail : null;
 
-  async function act(path: string, body?: unknown) {
-    if (!selectedId || busy) return;
+  async function act(path: string, body?: unknown): Promise<boolean> {
+    if (!selectedId || busy) return false;
     setBusy(true);
     try {
       await api(`/api/console/conversations/${encodeURIComponent(selectedId)}/${path}`, {
@@ -97,8 +97,10 @@ export function ConsoleContainer({ analyst }: { analyst: Analyst }) {
       });
       setError(null);
       await Promise.all([loadDetail(selectedId), loadList()]);
+      return true;
     } catch (e) {
       setError(message(e));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -120,6 +122,7 @@ export function ConsoleContainer({ analyst }: { analyst: Analyst }) {
       onReturnToAgent={() => void act("return")}
       onClose={() => void act("close")}
       onSendAsAnalyst={(text) => void act("messages", { text })}
+      onUpdateTicket={(ticketId, status, note) => act(`tickets/${encodeURIComponent(ticketId)}`, { status, note })}
       loading={loading}
       error={error}
       busy={busy}
