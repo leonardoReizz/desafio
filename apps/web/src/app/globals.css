@@ -2651,9 +2651,12 @@ textarea:focus-visible {
   .mobile-back {
     display: inline-flex;
   }
+  /* Altura livre: com a conversa assumida há mais botões, e eles não podem ficar atrás das mensagens. */
   .console-chat-header {
+    height: auto;
+    min-height: 56px;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 8px 12px;
     flex-wrap: wrap;
   }
   .console-chat-header .avatar {

@@ -516,8 +516,10 @@ export function ConsoleView({
                   <div>
                     {related.id}
                     <span>
-                      <i className={`status-dot status-${assumed ? "em_andamento" : related.status}`} />
-                      {assumed ? "Em atendimento" : STATUS_LABEL[related.status]}
+                      <i
+                        className={`status-dot status-${assumed && !CLOSED_STATUSES.has(related.status) ? "em_andamento" : related.status}`}
+                      />
+                      {assumed && !CLOSED_STATUSES.has(related.status) ? "Em atendimento" : STATUS_LABEL[related.status]}
                     </span>
                   </div>
                   <strong>{related.title}</strong>
