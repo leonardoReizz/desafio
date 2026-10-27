@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_rethrow } from "next/navigation";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { AuthError } from "./auth/session";
@@ -43,6 +44,8 @@ export async function route(fn: () => Promise<NextResponse | Response>): Promise
   try {
     return await fn();
   } catch (e) {
+    // Sinais internos do Next (prerender interrompido, redirect etc.) não são erros da aplicação.
+    unstable_rethrow(e);
     return handleError(e);
   }
 }
