@@ -74,6 +74,12 @@ o trace completo: intent, understood, action, confidence, rationale, rulesApplie
 - Sempre tratar loading, erro e vazio. Textos em pt-BR.
 - Não buscar dados direto do serviço de chamados ou do LLM no cliente — sempre via `/api/*`.
 
+## Agents de revisão
+
+- `revisor-seguranca` (`.claude/agents/`): rode antes de commitar mudanças em `/api`, `server/`, serviço de
+  chamados, agent ou deploy.
+- `guardiao-interface`: rode ao criar ou alterar telas, componentes ou `globals.css`.
+
 ## Convenções
 
 - Código e identificadores em inglês; textos de UI, domínio e mensagens do agent em pt-BR

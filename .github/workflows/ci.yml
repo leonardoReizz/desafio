@@ -42,3 +42,6 @@ jobs:
 
       - name: Testes
         run: pnpm test
+
+      - name: Vulnerabilidades em dependências
+        run: pnpm audit --prod --audit-level high
