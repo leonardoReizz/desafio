@@ -237,7 +237,10 @@ async function deterministicRoute(ctx: TurnContext, input: TurnInput): Promise<D
       confidence: 1,
       rationale: "Seleção feita na lista de chamados; o chamado está dentro do prazo.",
       rules: [],
-      text: `Está ${STATUS_LABEL[t.status].toLowerCase()} e dentro do prazo (${t.sla.label}). Quer complementar com alguma informação?`,
+      text:
+        t.status === "aguardando_usuario"
+          ? "O analista está aguardando uma resposta sua neste chamado. Quer complementar com alguma informação?"
+          : `Está ${STATUS_LABEL[t.status].toLowerCase()} e dentro do prazo (${t.sla.label}). Quer complementar com alguma informação?`,
     };
   }
 
