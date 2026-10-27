@@ -231,7 +231,10 @@ async function deterministicRoute(ctx: TurnContext, input: TurnInput): Promise<D
   }
 
   const pending = deps.conversations.pendingDraft(conversation.id);
-  if (pending && isExplicitConfirmation(input.text)) {
+  const uiConfirm = action?.kind === "quick_reply" && action.value === "confirmar_rascunho";
+  const uiCancel = action?.kind === "quick_reply" && action.value === "cancelar_rascunho";
+  if ((uiConfirm || uiCancel) && !pending) throw new DraftNotPendingError("Rascunho não está pendente");
+  if (pending && (uiConfirm || (!uiCancel && isExplicitConfirmation(input.text)))) {
     const { ticket, draft } = await confirmDraft(ctx, pending.id);
     const verb = draft.mode === "create" ? "abri o chamado" : draft.mode === "update" ? "atualizei o chamado" : "reabri o chamado";
     const critical = ticket.priority === "critica";
@@ -248,7 +251,7 @@ async function deterministicRoute(ctx: TurnContext, input: TurnInput): Promise<D
       text: `Pronto: ${verb} ${ticket.id} com prioridade ${ticket.priority === "media" ? "média" : ticket.priority === "critica" ? "crítica" : ticket.priority}. Prazo: ${ticket.sla.label}.`,
     };
   }
-  if (pending && isExplicitCancel(input.text)) {
+  if (pending && (uiCancel || isExplicitCancel(input.text))) {
     cancelDraft(ctx, pending.id);
     return {
       intent: "confirmar_ou_ajustar",
