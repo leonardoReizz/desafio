@@ -9,15 +9,48 @@ devolvê-la ao agent ou encerrá-la.
 
 ## Acesso público
 
-**https://desafio.cap.leonardo-reis.com/login** — qualquer senha.
+**https://desafio.cap.leonardo-reis.com/login**
 
-| Papel                               | E-mail                      | O que testar                                            |
-| ----------------------------------- | --------------------------- | ------------------------------------------------------- |
-| Funcionária (cenários do protótipo) | `ana.souza@nexo.com.br`     | chat com o agent, chamados, rascunho e confirmação      |
-| Analista N2                         | `rafael.lima@nexo.com.br`   | console: fila "Para você", assumir, responder, chamados |
-| Analista N1                         | `juliana.costa@nexo.com.br` | mesmo console, outra equipe                             |
+### Como entrar
 
-Abra a funcionária e o analista em janelas separadas (uma anônima) para ver o atendimento dos dois lados.
+Há **uma única tela de login** para todos. Não existe escolha de perfil: **o e-mail define quem você é** e
+para onde vai depois de entrar.
+
+- **Funcionário da empresa** → cai no **chat de atendimento** (`/chat`), onde conversa com o agent.
+- **Analista do suporte (service desk)** → cai no **console do analista** (`/console`), onde vê a fila,
+  assume conversas e trata chamados.
+
+**Senha:** qualquer uma (regra do protótipo; o campo só precisa estar preenchido). Só são aceitos os e-mails
+abaixo, todos `@nexo.com.br`.
+
+### Contas
+
+| Perfil                    | Nome           | E-mail                       | Área / equipe                      |
+| ------------------------- | -------------- | ---------------------------- | ---------------------------------- |
+| **Suporte** (analista)    | Rafael Lima    | `rafael.lima@nexo.com.br`    | Suporte N2                         |
+| **Suporte** (analista)    | Juliana Costa  | `juliana.costa@nexo.com.br`  | Suporte N1                         |
+| **Empresa** (funcionário) | Ana Souza      | `ana.souza@nexo.com.br`      | Financeiro — cenários do protótipo |
+| **Empresa** (funcionário) | Carla Mendes   | `carla.mendes@nexo.com.br`   | Comercial                          |
+| **Empresa** (funcionário) | Bruno Tavares  | `bruno.tavares@nexo.com.br`  | Marketing                          |
+| **Empresa** (funcionário) | Diego Ramos    | `diego.ramos@nexo.com.br`    | Engenharia                         |
+| **Empresa** (funcionário) | Elisa Prado    | `elisa.prado@nexo.com.br`    | Operações                          |
+| **Empresa** (funcionário) | Fábio Nunes    | `fabio.nunes@nexo.com.br`    | Jurídico                           |
+| **Empresa** (funcionário) | Gabriela Rocha | `gabriela.rocha@nexo.com.br` | Compras                            |
+
+Cada funcionário vê só os próprios chamados e conversas; os analistas veem as conversas de todos.
+
+### Para ver os dois lados ao mesmo tempo
+
+O login vale para o navegador inteiro (um cookie por navegador). Entrar com outro e-mail na mesma janela
+troca a sessão. Por isso:
+
+1. Numa janela normal, entre como **funcionário** (ex.: `ana.souza@nexo.com.br`) e converse com o agent.
+2. Numa **janela anônima** (ou outro navegador), entre como **suporte** (ex.: `rafael.lima@nexo.com.br`).
+3. Quando o funcionário pede um analista ou o agent abre um chamado, a conversa aparece em **"Para você"** no
+   console; o analista pode **Assumir atendimento**, responder e mudar o status dos chamados.
+
+Para trocar de usuário na mesma janela, use **Sair** (menu lateral no chat, ícone de saída no console).
+
 O uso do LLM tem um teto diário nesta demonstração; ao atingi-lo, o agent avisa e as ações sem LLM
 (seleção de chamado, confirmação, transferência, console) continuam funcionando.
 
@@ -32,14 +65,8 @@ pnpm seed                     # cria chamados, usuários e conversas de exemplo
 pnpm dev                      # web em http://localhost:3000 + serviço de chamados em :4001
 ```
 
-Contas de exemplo (qualquer senha):
-
-| Papel                               | E-mail                                                                                                               |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Funcionária (cenários do protótipo) | `ana.souza@nexo.com.br`                                                                                              |
-| Funcionários                        | `carla.mendes@`, `bruno.tavares@`, `diego.ramos@`, `elisa.prado@`, `fabio.nunes@`, `gabriela.rocha@` (`nexo.com.br`) |
-| Analista N2                         | `rafael.lima@nexo.com.br`                                                                                            |
-| Analista N1                         | `juliana.costa@nexo.com.br`                                                                                          |
+Login local igual ao público: mesmas [contas](#contas), qualquer senha, em http://localhost:3000/login.
+Localmente o `pnpm seed` também cria conversas de exemplo no console (Carla e Bruno aguardando analista).
 
 Outros comandos: `pnpm test` · `pnpm typecheck` · `pnpm lint` · `pnpm build && pnpm start`.
 
