@@ -1017,7 +1017,8 @@ textarea:focus-visible {
   padding: 0 0 16px;
 }
 .chat-composer {
-  height: 49px;
+  min-height: 64px;
+  align-items: flex-end;
   border: 1px solid var(--rule);
   border-radius: 12px;
   display: flex;
@@ -1032,8 +1033,17 @@ textarea:focus-visible {
   flex: 1;
   min-width: 0;
   padding: 8px 10px;
-  height: 100%;
+  min-height: 52px;
+  max-height: 200px;
+  line-height: 1.45;
   font-size: 15px;
+  font-family: inherit;
+  /* Sem barra de rolagem: o campo cresce com o texto; acima do limite rola sem barra visível. */
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.chat-composer textarea::-webkit-scrollbar {
+  display: none;
 }
 .chat-composer textarea::placeholder {
   color: #747e8c;

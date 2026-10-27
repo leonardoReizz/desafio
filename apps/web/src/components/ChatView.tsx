@@ -59,6 +59,14 @@ export function ChatView({
   useEffect(() => {
     if (messages.length > 5) viewport.current?.scrollTo({ top: viewport.current.scrollHeight, behavior: "smooth" });
   }, [messages.length]);
+  // Campo cresce com o texto (até um limite) em vez de mostrar barra de rolagem.
+  const composer = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = composer.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [text]);
   function submit() {
     const value = text.trim();
     if (!value || isSending || limitReached) return;
@@ -196,6 +204,8 @@ export function ChatView({
           {limitReached && <div className="limit-message">Você atingiu o limite de 30 mensagens nesta sessão.</div>}
           <div className="chat-composer">
             <textarea
+              ref={composer}
+              rows={2}
               aria-label="Mensagem"
               placeholder={limitReached ? "Limite de mensagens atingido" : "Escreva para o Nexo..."}
               value={text}
