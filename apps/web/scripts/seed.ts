@@ -135,6 +135,7 @@ function agent(conversationId: string, text: string, tr: DecisionTrace, blocks: 
       ],
     }),
   );
+  repo.addMessage(c.id, { role: "system", text: "Transferida para Suporte N1" });
   repo.update(c.id, {
     status: "waiting_human",
     handoffReason: "pedido_do_funcionario",
@@ -164,6 +165,7 @@ function agent(conversationId: string, text: string, tr: DecisionTrace, blocks: 
       steps: [step("buscar_central_ajuda", "buscou na central de ajuda", "nenhum artigo relevante")],
     }),
   );
+  repo.addMessage(c.id, { role: "system", text: "Transferida para Suporte N2" });
   repo.update(c.id, {
     status: "waiting_human",
     handoffReason: "baixa_confianca",
