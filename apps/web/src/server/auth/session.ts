@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import type { Analyst, Employee } from "@nexo/contracts";
 import { db } from "../db/client";
 import { UserRepository, type SessionUser } from "../db/users";
@@ -43,6 +44,8 @@ export async function destroySession(): Promise<void> {
 export async function currentUser(): Promise<SessionUser | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
+  // Expiração depende do relógio: marca a leitura como de request (não entra no prerender).
+  await connection();
   const row = db()
     .prepare<[string, string], { user_id: string }>("SELECT user_id FROM sessions WHERE token_hash = ? AND expires_at > ?")
     .get(hash(token), new Date().toISOString());
