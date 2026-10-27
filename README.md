@@ -7,6 +7,20 @@ devolvê-la ao agent ou encerrá-la.
 
 > Decisões de arquitetura detalhadas: [docs/adr/0001-arquitetura-nexo-assist.md](docs/adr/0001-arquitetura-nexo-assist.md)
 
+## Acesso público
+
+**https://desafio.cap.leonardo-reis.com/login** — qualquer senha.
+
+| Papel                               | E-mail                      | O que testar                                            |
+| ----------------------------------- | --------------------------- | ------------------------------------------------------- |
+| Funcionária (cenários do protótipo) | `ana.souza@nexo.com.br`     | chat com o agent, chamados, rascunho e confirmação      |
+| Analista N2                         | `rafael.lima@nexo.com.br`   | console: fila "Para você", assumir, responder, chamados |
+| Analista N1                         | `juliana.costa@nexo.com.br` | mesmo console, outra equipe                             |
+
+Abra a funcionária e o analista em janelas separadas (uma anônima) para ver o atendimento dos dois lados.
+O uso do LLM tem um teto diário nesta demonstração; ao atingi-lo, o agent avisa e as ações sem LLM
+(seleção de chamado, confirmação, transferência, console) continuam funcionando.
+
 ## Como rodar
 
 Requisitos: Node 22+ e pnpm 10.
